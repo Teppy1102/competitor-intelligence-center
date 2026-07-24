@@ -1,0 +1,12 @@
+# Dependency CHI can cho local dev/test - KHONG cai o production Render
+# (xem render.yaml buildCommand chi dung requirements.txt).
+-r requirements.txt
+
+pytest==8.3.4
+pytest-asyncio==0.25.2
+httpx==0.28.1
+
+# Playwright CHI can neu muon chay/test FACEBOOK_PROVIDER=playwright cuc bo
+# (lua chon thu cong, khong con la mac dinh production - xem Muc 2/11).
+# Sau khi cai, chay them: playwright install chromium
+playwright==1.49.1

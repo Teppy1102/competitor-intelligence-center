@@ -1,0 +1,78 @@
+{
+  "https://www.facebook.com/SampleCompetitorEdu": {
+    "status": "ok",
+    "profile": {
+      "display_name": "Sample Competitor Education",
+      "handle": "SampleCompetitorEdu",
+      "avatar_url": "https://example.com/avatar-competitor.jpg",
+      "bio": "Đơn vị đào tạo doanh nghiệp mẫu dùng cho kiểm thử.",
+      "category": "Education",
+      "follower_count_text": "12.5K followers",
+      "verified": false,
+      "fields_missing": []
+    },
+    "posts": [
+      {"post_id": "1001", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1001", "caption_text": "Khoá học Leadership khai giảng tháng này #leadership #daotao", "published_at_text": "3 ngày", "type_hint": "video", "thumbnail_url": "https://example.com/t1.jpg", "media_urls": ["https://example.com/t1.jpg"], "likes": 120, "comments": 15, "shares": 8, "views": 2000, "engagement_reliable": true},
+      {"post_id": "1002", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1002", "caption_text": "5 kỹ năng quản lý cần có #quanly", "published_at_text": "10 ngày", "type_hint": "photo", "thumbnail_url": "https://example.com/t2.jpg", "media_urls": [], "likes": 80, "comments": 6, "shares": 2, "views": null, "engagement_reliable": true},
+      {"post_id": "1003", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1003", "caption_text": "Chia sẻ từ học viên khoá OKR", "published_at_text": "18 ngày", "type_hint": "text", "thumbnail_url": null, "media_urls": [], "likes": 45, "comments": 3, "shares": 1, "views": null, "engagement_reliable": true},
+      {"post_id": "1004", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1004", "caption_text": "Livestream tư vấn tuyển sinh", "published_at_text": "27 ngày", "type_hint": "video", "thumbnail_url": "https://example.com/t4.jpg", "media_urls": [], "likes": 200, "comments": 30, "shares": 12, "views": 5000, "engagement_reliable": true},
+      {"post_id": "1005", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1005", "caption_text": "Ưu đãi học phí tháng 6 #uudai", "published_at_text": "35 ngày", "type_hint": "photo", "thumbnail_url": null, "media_urls": [], "likes": 60, "comments": 4, "shares": 3, "views": null, "engagement_reliable": true},
+      {"post_id": "1006", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1006", "caption_text": "Case study khách hàng doanh nghiệp", "published_at_text": "48 ngày", "type_hint": "reel", "thumbnail_url": "https://example.com/t6.jpg", "media_urls": [], "likes": 90, "comments": 10, "shares": 5, "views": 1800, "engagement_reliable": true},
+      {"post_id": "1007", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1007", "caption_text": "Bài viết chuyên môn về BSC-KPI", "published_at_text": "60 ngày", "type_hint": "text", "thumbnail_url": null, "media_urls": [], "likes": 35, "comments": 2, "shares": 0, "views": null, "engagement_reliable": true},
+      {"post_id": "1008", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1008", "caption_text": "Tổng kết khoá học HRBP tháng trước #hrbp", "published_at_text": "75 ngày", "type_hint": "photo", "thumbnail_url": null, "media_urls": [], "likes": 70, "comments": 5, "shares": 2, "views": null, "engagement_reliable": true},
+      {"post_id": "1009", "permalink": "https://www.facebook.com/SampleCompetitorEdu/posts/1009", "caption_text": "Bài viết ngoài khoảng thời gian phân tích", "published_at_text": "200 ngày", "type_hint": "text", "thumbnail_url": null, "media_urls": [], "likes": 10, "comments": 1, "shares": 0, "views": null, "engagement_reliable": true}
+    ]
+  },
+  "https://www.facebook.com/LinkPowerVN": {
+    "status": "ok",
+    "profile": {
+      "display_name": "Link Power - Học Viện Đào Tạo Nhân Sự Và Lãnh Đạo",
+      "handle": "LinkPowerVN",
+      "avatar_url": "https://example.com/avatar-linkpower.jpg",
+      "bio": "Đối tác đồng hành phát triển năng lực doanh nghiệp.",
+      "category": "Education",
+      "follower_count_text": "7.1K followers",
+      "verified": false,
+      "fields_missing": []
+    },
+    "posts": [
+      {"post_id": "2001", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2001", "caption_text": "Tổng đài KPI #9 BSC KPI thất bại vì đâu #bsckpi", "published_at_text": "1 ngày", "type_hint": "reel", "thumbnail_url": null, "media_urls": [], "likes": 55, "comments": 4, "shares": 1, "views": 900, "engagement_reliable": true},
+      {"post_id": "2002", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2002", "caption_text": "Khoá học OKR khai giảng", "published_at_text": "12 ngày", "type_hint": "photo", "thumbnail_url": null, "media_urls": [], "likes": 40, "comments": 3, "shares": 1, "views": null, "engagement_reliable": true},
+      {"post_id": "2003", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2003", "caption_text": "Chia sẻ kinh nghiệm HRBP", "published_at_text": "20 ngày", "type_hint": "text", "thumbnail_url": null, "media_urls": [], "likes": 25, "comments": 2, "shares": 0, "views": null, "engagement_reliable": true},
+      {"post_id": "2004", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2004", "caption_text": "Webinar Total Rewards", "published_at_text": "30 ngày", "type_hint": "video", "thumbnail_url": null, "media_urls": [], "likes": 70, "comments": 8, "shares": 3, "views": 1500, "engagement_reliable": true},
+      {"post_id": "2005", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2005", "caption_text": "Ưu đãi đăng ký sớm", "published_at_text": "40 ngày", "type_hint": "photo", "thumbnail_url": null, "media_urls": [], "likes": 30, "comments": 1, "shares": 0, "views": null, "engagement_reliable": true},
+      {"post_id": "2006", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2006", "caption_text": "Case study doanh nghiệp đối tác", "published_at_text": "55 ngày", "type_hint": "text", "thumbnail_url": null, "media_urls": [], "likes": 20, "comments": 1, "shares": 0, "views": null, "engagement_reliable": true},
+      {"post_id": "2007", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2007", "caption_text": "Bài viết chuyên môn Digital Learning", "published_at_text": "70 ngày", "type_hint": "photo", "thumbnail_url": null, "media_urls": [], "likes": 18, "comments": 0, "shares": 0, "views": null, "engagement_reliable": true},
+      {"post_id": "2008", "permalink": "https://www.facebook.com/LinkPowerVN/posts/2008", "caption_text": "Tổng kết sự kiện quý", "published_at_text": "80 ngày", "type_hint": "video", "thumbnail_url": null, "media_urls": [], "likes": 45, "comments": 5, "shares": 2, "views": 700, "engagement_reliable": true}
+    ]
+  },
+  "https://www.facebook.com/PrivatePageBlocked": {
+    "status": "data_unavailable",
+    "profile": null,
+    "posts": [],
+    "reason": "Facebook yêu cầu đăng nhập/xác minh để xem trang này ở chế độ ẩn danh — không thể thu thập dữ liệu công khai."
+  },
+  "https://www.facebook.com/PagesFailedPostsOk": {
+    "status": "partial_data",
+    "profile": null,
+    "posts": [
+      {"post_id": "3001", "permalink": "https://www.facebook.com/PagesFailedPostsOk/posts/3001", "caption_text": "Bài viết vẫn lấy được dù Pages Scraper lỗi", "published_at_text": "2 ngày", "type_hint": "text", "thumbnail_url": null, "media_urls": [], "likes": 10, "comments": 1, "shares": 0, "views": null, "engagement_reliable": true}
+    ],
+    "reason": "Không lấy được thông tin Fanpage: Pages Scraper lỗi."
+  },
+  "https://www.facebook.com/PostsFailedPagesOk": {
+    "status": "partial_data",
+    "profile": {
+      "display_name": "Posts Failed Pages Ok",
+      "handle": "PostsFailedPagesOk",
+      "avatar_url": "https://example.com/avatar.jpg",
+      "bio": "Fanpage mẫu để test Posts Scraper lỗi.",
+      "category": "Education",
+      "follower_count_text": "500 người theo dõi",
+      "verified": false,
+      "fields_missing": []
+    },
+    "posts": [],
+    "reason": "Không lấy được bài viết: Posts Scraper lỗi."
+  }
+}

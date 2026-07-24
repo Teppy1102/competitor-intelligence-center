@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: competitor-intelligence-center-api
+    runtime: python
+    # Facebook Provider production MAC DINH la Apify (khong con Playwright) -
+    # KHONG can Chromium tren Render nua, build nhe/nhanh hon nhieu. Goi
+    # "free" (512MB RAM) du dung vi khong con chay headless browser o day.
+    # Neu sau nay chu dong chuyen FACEBOOK_PROVIDER=playwright, phai doi
+    # buildCommand ben duoi de cai them Playwright + Chromium va can nang
+    # cap plan (xem DEPLOY_MVP_FACEBOOK.md).
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5-mini
+      - key: APIFY_API_TOKEN
+        sync: false
+      - key: FACEBOOK_PROVIDER
+        value: apify
+      - key: APIFY_FACEBOOK_PAGES_ACTOR
+        value: apify/facebook-pages-scraper
+      - key: APIFY_FACEBOOK_POSTS_ACTOR
+        value: apify/facebook-posts-scraper
+      - key: APIFY_MAX_POSTS
+        value: "30"
+      - key: APIFY_TIMEOUT_SECONDS
+        value: "180"
+      - key: PYTHON_VERSION
+        value: 3.12.3

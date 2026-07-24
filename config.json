@@ -1,0 +1,16 @@
+{
+  "supported_platforms": ["facebook", "linkedin", "youtube", "tiktok"],
+  "active_platforms": ["facebook"],
+  "linkpower_profiles": {
+    "facebook": "https://www.facebook.com/LinkPowerVN",
+    "youtube": "https://www.youtube.com/@LinkPower",
+    "tiktok": "https://www.tiktok.com/@linkpower.vn",
+    "linkedin": "https://vn.linkedin.com/company/linkpowervn"
+  },
+  "max_posts_per_analysis": 60,
+  "facebook_post_limit": 30,
+  "apify_facebook_pages_actor": "apify/facebook-pages-scraper",
+  "apify_facebook_posts_actor": "apify/facebook-posts-scraper",
+  "apify_timeout_seconds": 180,
+  "ai_provider": "openai"
+}

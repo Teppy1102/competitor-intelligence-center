@@ -1,0 +1,11 @@
+# Production dependencies - Facebook Provider mac dinh la Apify, KHONG can
+# Chromium/Playwright o day (nhe, deploy nhanh - xem Muc 14). Playwright chi
+# nam trong requirements-dev.txt cho lua chon thu cong FACEBOOK_PROVIDER=playwright
+# khi chay local/dev - xem providers/registry.py + APIFY_SETUP_AND_TEST.md.
+fastapi==0.139.2
+uvicorn[standard]==0.51.0
+python-dotenv==1.2.2
+pydantic==2.13.4
+beautifulsoup4==4.15.0
+openai==2.46.0
+apify-client==3.1.0

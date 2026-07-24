@@ -10,9 +10,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from benchmark import is_benchmark_eligible
-from schemas import CompetitorDataset, ProfileWithPosts
+from schemas import (
+    CompetitorDataset,
+    ContentTypeBreakdownEntry,
+    EngagementPostRef,
+    ProfileWithPosts,
+)
 
 from .completeness import SectionEligibility, compute_section_eligibility
+from .insights import (
+    EngagementAverages,
+    build_content_type_breakdown,
+    build_top_performing_refs,
+    build_underperforming_refs,
+    compute_engagement_averages,
+    detect_cta_patterns,
+    detect_hook_patterns,
+)
 from .stats import EngagementStats, PublishingStats, compute_engagement_stats, compute_publishing_stats
 
 # Bump khi noi dung SYSTEM PROMPT hoac TASK INSTRUCTION thay doi - doc lap
@@ -42,6 +56,24 @@ liệu cung cấp, không được diễn giải lại rồi ghi như trích d�
 số khác.
 5. Output PHẢI là HTML với đúng 13 thẻ <h2> đánh số từ 1 đến 13 theo đúng \
 tên section quy định, không thêm/bớt/đổi thứ tự section.
+6. QUAN TRỌNG — chỉ áp dụng cho phần DIỄN GIẢI (Executive Summary, Tone of \
+Voice, Audience Analysis, Brand Positioning, SWOT, Recommendation): nếu \
+ELIGIBILITY cho section đó là ĐỦ DỮ LIỆU, bạn BẮT BUỘC phải viết nhận định \
+cụ thể dựa trên các con số/phát hiện thật đã có trong DATA CONTEXT (tần \
+suất đăng, engagement trung bình, content pillar, hook/CTA đã tính sẵn...) \
+— TUYỆT ĐỐI KHÔNG được viết chung chung "Không đủ dữ liệu" chỉ vì caption \
+ngắn hoặc bạn thấy chưa đủ "ấn tượng" để kết luận. Khi bằng chứng chỉ đủ \
+để đưa ra góc nhìn sơ bộ (không phải kết luận chắc chắn), hãy dùng cách \
+diễn đạt "Góc nhìn sơ bộ dựa trên N bài công khai gần nhất..." kèm mức độ \
+tin cậy, KHÔNG dùng "Không đủ dữ liệu" trong trường hợp này — 2 câu nói \
+khác nhau: "không có dữ liệu để nói" (chỉ dùng khi ELIGIBILITY = KHÔNG ĐỦ) \
+và "có dữ liệu nhưng chưa toàn diện" (dùng "góc nhìn sơ bộ").
+7. Phân biệt rõ 3 loại thông tin khi viết diễn giải: (a) dữ liệu trực tiếp \
+(số liệu/trích dẫn có trong DATA CONTEXT), (b) suy luận (nhận định rút ra \
+từ (a), phải nêu rõ dựa trên căn cứ nào), (c) giới hạn (những gì KHÔNG thể \
+kết luận vì thiếu dữ liệu — nêu cụ thể, không nói chung chung).
+8. KHÔNG được đề cập doanh thu, tỷ lệ chuyển đổi (conversion), hoặc ngân \
+sách nếu DATA CONTEXT không có số liệu về các mục này.
 """
 
 
@@ -60,6 +92,18 @@ class DatasetStatsBundle:
     sampled_competitor_post_count: int
     sampled_linkpower_post_count: int
 
+    # Bo sung sau audit "report dinh tinh trong du da co 30 bai that" - cac
+    # gia tri nay duoc TINH BANG CODE (analyzer/insights.py), dua vao DATA
+    # CONTEXT de AI viet narrative co can cu THAT, va duoc report/rules.py
+    # dung lai de GHI DE truc tiep len ket qua AI (khong phu thuoc AI co
+    # tuan thu dung markup hay khong - xem report/rules.py).
+    competitor_top_performing_refs: list[EngagementPostRef]
+    competitor_underperforming_refs: list[EngagementPostRef]
+    competitor_hook_patterns: list[str]
+    competitor_cta_patterns: list[str]
+    competitor_content_type_breakdown: list[ContentTypeBreakdownEntry]
+    competitor_engagement_averages: EngagementAverages
+
 
 @dataclass(frozen=True)
 class PromptBundle:
@@ -73,6 +117,8 @@ def compute_dataset_stats(
     max_posts_per_analysis: int = MAX_POSTS_PER_ANALYSIS_DEFAULT,
 ) -> DatasetStatsBundle:
     time_range_days = (dataset.time_range.until - dataset.time_range.since).days
+
+    competitor_posts = dataset.competitor.posts
 
     return DatasetStatsBundle(
         competitor_publishing=compute_publishing_stats(
@@ -91,6 +137,15 @@ def compute_dataset_stats(
         sampled_linkpower_post_count=min(
             len(dataset.linkpower.posts), max_posts_per_analysis
         ),
+        # Tinh THUAN BANG CODE (analyzer/insights.py) - luon tinh (khong gate
+        # o day), viec co dua vao report cuoi cung hay khong do
+        # report/rules.py quyet dinh dua tren eligibility tuong ung.
+        competitor_top_performing_refs=build_top_performing_refs(competitor_posts),
+        competitor_underperforming_refs=build_underperforming_refs(competitor_posts),
+        competitor_hook_patterns=detect_hook_patterns(competitor_posts),
+        competitor_cta_patterns=detect_cta_patterns(competitor_posts),
+        competitor_content_type_breakdown=build_content_type_breakdown(competitor_posts),
+        competitor_engagement_averages=compute_engagement_averages(competitor_posts),
     )
 
 
@@ -180,6 +235,49 @@ def _render_post_list(posts) -> str:
     return "\n".join(lines) if lines else "(không có bài viết nào được thu thập)"
 
 
+def _render_insights_block(stats: DatasetStatsBundle) -> str:
+    """Phat hien da tinh SAN bang code (analyzer/insights.py) - dua vao DATA
+    CONTEXT de AI viet narrative CO CAN CU THAT, thay vi phai tu doc 30 bai
+    caption roi tu suy ra content pillar/hook/CTA (chinh la nguyen nhan cac
+    section nay tung tra rong/0% du da co du lieu that - xem audit
+    debug/analysis_output.json). AI KHONG can dien lai chinh xac cac con so
+    nay vao content_type_breakdown/hook_patterns/cta_patterns/
+    top_performing_posts trong HTML - report/rules.py se GHI DE bang chinh
+    cac gia tri nay bat ke AI viet gi (xem _MARKUP_INSTRUCTION)."""
+    avg = stats.competitor_engagement_averages
+
+    def _fmt(value):
+        return NO_DATA_PROMPT if value is None else value
+
+    top_posts_lines = "\n".join(
+        f"  - {r.reason}" for r in stats.competitor_top_performing_refs
+    ) or "  (không đủ dữ liệu engagement để xếp hạng)"
+
+    hook_lines = "\n".join(f"  - {h}" for h in stats.competitor_hook_patterns) or "  (chưa nhận dạng được)"
+    cta_lines = "\n".join(f"  - {c}" for c in stats.competitor_cta_patterns) or "  (chưa nhận dạng được)"
+    type_lines = "\n".join(
+        f"  - {t.type}: {t.percentage}%" for t in stats.competitor_content_type_breakdown
+    ) or "  (không có dữ liệu)"
+
+    return (
+        "== PHÂN TÍCH ĐÃ TÍNH SẴN BẰNG CODE (dùng để viết diễn giải, KHÔNG cần điền lại "
+        "chính xác vào content_type_breakdown/hook_patterns/cta_patterns/top_performing_posts "
+        "— hệ thống sẽ tự ghi đè các trường đó) ==\n"
+        f"Engagement trung bình THẬT (bỏ qua bài thiếu số liệu, KHÔNG lấy 0 thay cho thiếu dữ liệu): "
+        f"avg_likes={_fmt(avg.avg_likes)}, avg_comments={_fmt(avg.avg_comments)}, "
+        f"avg_shares={_fmt(avg.avg_shares)}, avg_total_engagement={_fmt(avg.avg_total_engagement)} "
+        f"(trên {avg.sample_size} bài có ít nhất 1 chỉ số)\n"
+        f"Top bài nổi bật (đã xếp hạng bằng code theo engagement_score = likes + 2*comments + 3*shares):\n"
+        f"{top_posts_lines}\n"
+        f"Hook pattern đã nhận dạng (đầu bài viết):\n{hook_lines}\n"
+        f"CTA pattern đã nhận dạng:\n{cta_lines}\n"
+        f"Phân bố loại nội dung:\n{type_lines}\n"
+    )
+
+
+NO_DATA_PROMPT = "không đủ dữ liệu"
+
+
 def _render_data_context(dataset, stats: DatasetStatsBundle, competitor_posts, linkpower_posts) -> str:
     since = dataset.time_range.since.isoformat()
     until = dataset.time_range.until.isoformat()
@@ -195,6 +293,7 @@ def _render_data_context(dataset, stats: DatasetStatsBundle, competitor_posts, l
         f"{_render_profile_block('LINKPOWER (để Benchmark)', dataset.linkpower, stats.linkpower_publishing, stats.linkpower_engagement)}\n"
         f"Danh sách bài viết LinkPower ({len(linkpower_posts)} bài, đã chọn lọc):\n"
         f"{_render_post_list(linkpower_posts)}\n\n"
+        f"{_render_insights_block(stats)}\n"
         f"== COMPLETENESS FLAGS ==\n"
         f"competitor_posts_collected: {dataset.completeness.competitor_posts_collected}\n"
         f"competitor_posts_expected_min: {dataset.completeness.competitor_posts_expected_min}\n"
@@ -208,31 +307,124 @@ _MARKUP_INSTRUCTION = """\
 Đây là chỉ thị QUAN TRỌNG — output không đúng định dạng này sẽ bị hệ thống \
 từ chối và phải sinh lại. Xem quy ước đầy đủ ở report/parser.py.
 
+QUY TẮC CHUNG:
 1. Ranh giới section: <h2>{số}. {Tên section}</h2>, đủ 13 thẻ đánh số 1-13 \
 LIÊN TIẾP, KHÔNG bọc từng section trong <div>/<section> riêng — giữ cấu \
 trúc PHẲNG.
-2. Trường dạng chữ: <p data-field="tên_trường">nội dung</p>
-3. Trường dạng danh sách chữ: <ul data-field="tên_trường"><li>...</li></ul>
-4. Object cố định (vd "scores" trong Executive Summary — 7 field con tên cố \
-định content_volume_score, engagement_score, consistency_score, \
-content_diversity_score, brand_clarity_score, competitive_threat_score, \
-ai_confidence; mỗi field con lại có "value" và "note"): lồng data-field \
-theo đúng tên, không cần data-item. Ví dụ:
-<div data-field="scores">
-  <div data-field="content_volume_score">
-    <span data-field="value">Cao</span><span data-field="note">3 bài/tuần</span>
-  </div>
-  ... (đủ 7 field con)
-</div>
-5. Danh sách object động (vd content_pillars, benchmark.rows, action_plan): \
+2. PHẢI dùng ĐÚNG CHÍNH XÁC tên data-field liệt kê trong khung mẫu bên dưới \
+cho từng section — đây là nguyên nhân lỗi phổ biến nhất (dùng tên khác đi, \
+dù nghĩa tương đương, sẽ khiến hệ thống đọc ra rỗng/0). KHÔNG tự đặt tên \
+field khác, KHÔNG thêm field ngoài danh sách, KHÔNG bỏ field nào.
+3. Danh sách object động (content_pillars, benchmark.rows, action_plan...): \
 bọc bằng 1 thẻ data-field=tên_trường, MỖI phần tử là 1 thẻ con có thuộc \
-tính data-item, bên trong lại có các data-field theo đúng tên field của \
-object đó. Ví dụ 1 dòng Benchmark:
+tính data-item, bên trong có các data-field theo đúng tên field liệt kê.
+
+KHUNG MẪU BẮT BUỘC — điền đúng field, đúng tên (nội dung ví dụ chỉ minh hoạ \
+định dạng, PHẢI thay bằng nội dung thật dựa trên DATA CONTEXT):
+
+<h2>1. Executive Summary</h2>
+<p data-field="ai_summary">Nhận định tổng quan 2-4 câu, PHẢI có góc nhìn cụ \
+thể dựa trên số liệu thật (xem QUY TẮC BẮT BUỘC #6 ở trên) — KHÔNG được để \
+trống hoặc chỉ ghi "Không đủ dữ liệu" nếu ELIGIBILITY đủ.</p>
+<p data-field="overview">Mô tả ngắn về hoạt động tổng thể của đối thủ trong kỳ.</p>
+<p data-field="conclusion">Kết luận ngắn, nêu rõ đây là góc nhìn sơ bộ nếu bằng chứng chưa toàn diện.</p>
+<p data-field="data_confidence_note">Ghi rõ số bài phân tích, khoảng thời gian, và giới hạn dữ liệu (nếu có).</p>
+<div data-field="scores">
+  <div data-field="content_volume_score"><span data-field="value">Cao</span><span data-field="note">...</span></div>
+  <div data-field="engagement_score"><span data-field="value">Trung bình</span><span data-field="note">...</span></div>
+  <div data-field="consistency_score"><span data-field="value">Cao</span><span data-field="note">...</span></div>
+  <div data-field="content_diversity_score"><span data-field="value">Trung bình</span><span data-field="note">...</span></div>
+  <div data-field="brand_clarity_score"><span data-field="value">Rõ ràng</span><span data-field="note">...</span></div>
+  <div data-field="competitive_threat_score"><span data-field="value">Trung bình</span><span data-field="note">...</span></div>
+  <div data-field="ai_confidence"><span data-field="value">Trung bình</span><span data-field="note">...</span></div>
+</div>
+
+<h2>2. Account Overview</h2>
+<p data-field="platform">facebook</p>
+<p data-field="display_name">Tên trang</p>
+<p data-field="handle">@handle (nếu có)</p>
+<p data-field="scale">Quy mô dựa trên follower_count</p>
+<p data-field="positioning_summary">Định vị tổng quan.</p>
+<p data-field="activity_frequency">Mô tả tần suất hoạt động.</p>
+<p data-field="profile_data_confidence">partial</p>
+
+<h2>3. Content Analysis</h2>
+<div data-field="content_pillars"><div data-item>
+  <span data-field="pillar">Tên chủ đề nội dung</span>
+  <span data-field="post_count">0</span>
+  <span data-field="percentage">0</span>
+  <span data-field="example_post_permalinks"><li>LIỆT KÊ ĐẦY ĐỦ permalink THẬT của MỌI bài thuộc pillar này (không chỉ 1-2 ví dụ) — hệ thống sẽ tự đếm lại post_count/percentage từ danh sách permalink này, số bạn điền ở post_count/percentage chỉ mang tính tham khảo</li></span>
+</div></div>
+<div data-field="content_type_breakdown"><div data-item><span data-field="type">video</span><span data-field="percentage">0</span></div></div>
+
+<h2>4. Tone of Voice</h2>
+<ul data-field="primary_tones"><li>Chuyên nghiệp</li></ul>
+<div data-field="tone_distribution"><div data-item><span data-field="tone">Chuyên nghiệp</span><span data-field="percentage">0</span></div></div>
+<p data-field="narrative">Diễn giải giọng văn, PHẢI có nhận định cụ thể nếu ELIGIBILITY đủ.</p>
+
+<h2>5. Content Style</h2>
+<ul data-field="hook_patterns"><li>không cần điền chính xác — hệ thống tự tính, chỉ cần giữ thẻ này tồn tại</li></ul>
+<ul data-field="cta_patterns"><li>không cần điền chính xác — hệ thống tự tính, chỉ cần giữ thẻ này tồn tại</li></ul>
+<p data-field="storytelling_usage">Mô tả cách dùng storytelling (nếu có).</p>
+<p data-field="copywriting_style">Mô tả phong cách viết.</p>
+<p data-field="caption_pattern">Mô tả cấu trúc caption thường gặp.</p>
+
+<h2>6. Visual Analysis</h2>
+<p data-field="color_palette_note">Không đủ dữ liệu</p>
+<p data-field="design_style">Không đủ dữ liệu</p>
+<p data-field="layout_pattern">Không đủ dữ liệu</p>
+<p data-field="thumbnail_style">Không đủ dữ liệu</p>
+<p data-field="video_style">Không đủ dữ liệu</p>
+
+<h2>7. Publishing Pattern</h2>
+<p data-field="posts_per_week_avg">0</p>
+<p data-field="most_common_day">Thứ Ba</p>
+<p data-field="most_common_hour_range">09:00-12:00</p>
+<p data-field="consistency_note">Nhận định về độ đều đặn.</p>
+
+<h2>8. Engagement Analysis</h2>
+<div data-field="top_performing_posts"><div data-item><span data-field="permalink">không cần điền chính xác — hệ thống tự tính</span><span data-field="reason">...</span></div></div>
+<div data-field="underperforming_posts"></div>
+<p data-field="engagement_data_confidence">high</p>
+
+<h2>9. Audience Analysis</h2>
+<p data-field="inferred_persona">Chân dung đối tượng suy luận từ nội dung/tương tác.</p>
+<p data-field="insight">Insight cụ thể.</p>
+<p data-field="pain_point">Nỗi đau/nhu cầu suy luận được.</p>
+<p data-field="customer_journey_note">Ghi chú hành trình khách hàng nếu suy luận được.</p>
+<p data-field="inference_basis">Nêu rõ dựa trên content pillar/hook/CTA nào để suy luận.</p>
+
+<h2>10. Brand Positioning</h2>
+<p data-field="usp">Điểm khác biệt suy luận được.</p>
+<ul data-field="key_messages"><li>Thông điệp lặp lại.</li></ul>
+<p data-field="brand_value">Giá trị thương hiệu.</p>
+<p data-field="differentiation">Khác biệt hoá.</p>
+
+<h2>11. SWOT</h2>
+<ul data-field="strength"><li>...</li></ul>
+<ul data-field="weakness"><li>...</li></ul>
+<ul data-field="opportunity"><li>...</li></ul>
+<ul data-field="threat"><li>...</li></ul>
+
+<h2>12. Benchmark</h2>
 <div data-field="rows"><div data-item>
   <span data-field="criteria">Tần suất đăng bài</span>
   <span data-field="linkpower">3 bài/tuần</span>
   <span data-field="competitor">5 bài/tuần</span>
   <span data-field="status">Đối thủ mạnh hơn</span>
+</div></div>
+<ul data-field="linkpower_advantages"><li>...</li></ul>
+<ul data-field="competitor_advantages"><li>...</li></ul>
+<p data-field="gap_analysis">...</p>
+<ul data-field="quick_wins"><li>...</li></ul>
+<ul data-field="content_gap"><li>...</li></ul>
+
+<h2>13. Recommendation</h2>
+<div data-field="action_plan"><div data-item>
+  <span data-field="horizon">30 ngày</span>
+  <span data-field="action">...</span>
+  <span data-field="reason">...</span>
+  <span data-field="linked_gap">Phải tham chiếu 1 phát hiện cụ thể ở Benchmark.</span>
 </div></div>
 """
 
@@ -255,6 +447,8 @@ def _render_task_instruction(eligibility: SectionEligibility, benchmark_eligible
         f"phân tích hình ảnh, luôn trả 'Không đủ dữ liệu'\n"
         f"- Section 7 (Publishing Pattern): {_flag(eligibility.publishing_pattern)}\n"
         f"- Section 8 (Engagement Analysis): {_flag(eligibility.engagement_analysis)}\n"
+        f"- content_type_breakdown (trong Section 3): {_flag(eligibility.media_mix)} "
+        f"(độc lập với Content/Tone/Style — có thể đủ dù thiếu text)\n"
         f"- Section 9, 10, 11 (Audience/Positioning/SWOT): {_flag(eligibility.audience_positioning_swot)}\n"
         f"- Section 12 (Benchmark): {_flag(benchmark_eligible)}\n\n"
         f"{_MARKUP_INSTRUCTION}"

@@ -10,3 +10,8 @@ reports/*.html
 reports/*.meta.json
 !reports/.gitkeep
 .pytest_cache/
+.ruff_cache/
+
+# Debug script output - chua du lieu Facebook that (dung cho scripts/debug_facebook_pipeline.py)
+debug/*.json
+!debug/.gitkeep

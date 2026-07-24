@@ -15,6 +15,7 @@ cao hon - xem RISK_ANALYSIS.md muc 2).
 from __future__ import annotations
 
 from analyzer import DatasetStatsBundle, SectionEligibility
+from analyzer.insights import recompute_content_pillars
 from benchmark import enforce_benchmark_rules
 from schemas import (
     AccountOverviewSection,
@@ -26,6 +27,7 @@ from schemas import (
     ContentStyleSection,
     EngagementAnalysisSection,
     EngagementConfidence,
+    ExecutiveSummarySection,
     KPIScores,
     PublishingPatternSection,
     ScoreEntry,
@@ -35,6 +37,7 @@ from schemas import (
 )
 
 NO_DATA = "Không đủ dữ liệu"
+_NO_DATA_LIKE = {"", NO_DATA, NO_DATA.lower()}
 
 
 def enforce_anti_fabrication_rules(
@@ -53,7 +56,25 @@ def enforce_anti_fabrication_rules(
     content_analysis = report.content_analysis
     tone_of_voice = report.tone_of_voice
     content_style = report.content_style
-    if not eligibility.content_tone_style:
+    if eligibility.content_tone_style:
+        # Phan 5/6 (audit): content_pillars/hook_patterns/cta_patterns KHONG
+        # con tin nguyen ket qua AI parse duoc - GHI DE bang gia tri da tinh
+        # san bang code (analyzer/insights.py), doc lap voi viec AI co tuan
+        # thu dung markup hay khong (nguyen nhan chinh cua bug "label nhung
+        # count=0/rong" da audit - xem debug/analysis_output.json).
+        real_pillars = recompute_content_pillars(
+            content_analysis.content_pillars, dataset.competitor.posts
+        )
+        content_analysis = content_analysis.model_copy(
+            update={"content_pillars": real_pillars}
+        )
+        content_style = content_style.model_copy(
+            update={
+                "hook_patterns": stats.competitor_hook_patterns,
+                "cta_patterns": stats.competitor_cta_patterns,
+            }
+        )
+    else:
         content_analysis = ContentAnalysisSection()
         tone_of_voice = ToneOfVoiceSection(narrative=NO_DATA)
         content_style = ContentStyleSection(
@@ -61,6 +82,18 @@ def enforce_anti_fabrication_rules(
             copywriting_style=NO_DATA,
             caption_pattern=NO_DATA,
         )
+
+    # content_type_breakdown DOC LAP voi content_tone_style (Phan 3: thieu
+    # text khong duoc khoa media mix, va nguoc lai) - luon GHI DE bang gia
+    # tri code-tinh khi eligibility.media_mix dat, bat ke AI co dien hay khong
+    # (day chinh la truong TRUOC DAY khong bao gio duoc dua vao report cuoi -
+    # xem docstring analyzer/insights.py.build_content_type_breakdown).
+    content_type_breakdown = (
+        stats.competitor_content_type_breakdown if eligibility.media_mix else []
+    )
+    content_analysis = content_analysis.model_copy(
+        update={"content_type_breakdown": content_type_breakdown}
+    )
 
     engagement_analysis = _enforce_engagement_analysis(
         report.engagement_analysis, stats, eligibility
@@ -91,7 +124,9 @@ def enforce_anti_fabrication_rules(
         pillar_count=len(content_analysis.content_pillars),
         ai_scores=report.executive_summary.scores,
     )
-    executive_summary = report.executive_summary.model_copy(update={"scores": scores})
+    executive_summary = _enforce_executive_summary(
+        report.executive_summary, stats, eligibility, scores
+    )
 
     return report.model_copy(
         update={
@@ -150,6 +185,67 @@ def _enforce_publishing_pattern(
     )
 
 
+def _enforce_executive_summary(
+    section: ExecutiveSummarySection,
+    stats: DatasetStatsBundle,
+    eligibility: SectionEligibility,
+    scores: KPIScores,
+) -> ExecutiveSummarySection:
+    """Phan 7/10 (audit): AI Summary KHONG duoc phep rong/'Khong du du lieu'
+    chung chung khi da co du lieu THAT (content_tone_style eligible). Neu AI
+    van tra rong (khong tuan thu prompt, loi model...), THAY THE bang 1 doan
+    fallback rule-based tong hop TU CHINH so lieu that (Phan 10: "Fallback
+    phai duoc sinh tu metric that. Khong hard-code ket luan cu the cho moi
+    Fanpage") - KHONG bao gio de Executive Summary trong khi co du lieu."""
+    ai_summary = (section.ai_summary or "").strip()
+    if eligibility.content_tone_style and ai_summary.lower() in _NO_DATA_LIKE:
+        ai_summary = _build_fallback_summary(stats)
+
+    overview = (section.overview or "").strip()
+    if eligibility.content_tone_style and overview.lower() in _NO_DATA_LIKE:
+        overview = _build_fallback_overview(stats)
+
+    return section.model_copy(update={"ai_summary": ai_summary, "overview": overview, "scores": scores})
+
+
+def _build_fallback_summary(stats: DatasetStatsBundle) -> str:
+    pub = stats.competitor_publishing
+    avg = stats.competitor_engagement_averages
+
+    parts = [
+        f"Góc nhìn sơ bộ dựa trên {pub.posts_count} bài công khai gần nhất: "
+        f"Fanpage duy trì tần suất khoảng {pub.posts_per_week_avg} bài/tuần, "
+        f"thường đăng vào {pub.most_common_day}, khung giờ phổ biến "
+        f"{pub.most_common_hour_range}."
+    ]
+    if avg.avg_total_engagement is not None:
+        parts.append(
+            f"Tương tác trung bình mỗi bài đạt {avg.avg_likes or 0} likes, "
+            f"{avg.avg_comments or 0} bình luận và {avg.avg_shares or 0} lượt chia sẻ "
+            f"(tính trên {avg.sample_size} bài có số liệu công khai)."
+        )
+    else:
+        parts.append("Chưa đủ dữ liệu công khai để tính engagement trung bình đáng tin cậy.")
+    parts.append(
+        "Đây là phần tổng hợp tự động từ dữ liệu định lượng do phần diễn giải AI tạm thời "
+        "chưa khả dụng cho lần phân tích này — không phản ánh toàn bộ hiệu quả kinh doanh."
+    )
+    return " ".join(parts)
+
+
+def _build_fallback_overview(stats: DatasetStatsBundle) -> str:
+    breakdown = stats.competitor_content_type_breakdown
+    if breakdown:
+        top_type = max(breakdown, key=lambda t: t.percentage)
+        type_note = f"Loại nội dung chiếm tỷ trọng lớn nhất: {top_type.type} ({top_type.percentage}%)."
+    else:
+        type_note = "Chưa đủ dữ liệu để xác định loại nội dung chủ đạo."
+    return (
+        f"Trong kỳ phân tích, đối thủ thu thập được {stats.competitor_publishing.posts_count} bài viết công khai. "
+        f"{type_note}"
+    )
+
+
 def _force_no_data_visual_analysis() -> VisualAnalysisSection:
     """MVP_SCOPE.md Sprint 1: Visual Analysis mac dinh 'Khong du du lieu' o
     MVP du AI viet gi (chua tich hop Vision model)."""
@@ -178,7 +274,18 @@ def _enforce_engagement_analysis(
         if stats.competitor_engagement.has_reliable_data
         else EngagementConfidence.NONE
     )
-    return section.model_copy(update={"engagement_data_confidence": confidence})
+    # Phan 4.1 (audit): Top 5/underperforming KHONG con phu thuoc AI doc
+    # duoc caption va tu chon bai - GHI DE bang danh sach da xep hang THAT
+    # bang code (analyzer/insights.py), doc lap voi viec AI co dien dung
+    # top_performing_posts hay khong (nguyen nhan bug "Top 5 bai noi bat
+    # trong" da audit).
+    return section.model_copy(
+        update={
+            "engagement_data_confidence": confidence,
+            "top_performing_posts": stats.competitor_top_performing_refs,
+            "underperforming_posts": stats.competitor_underperforming_refs,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------

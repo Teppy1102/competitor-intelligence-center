@@ -33,21 +33,47 @@ from adapters.normalize import (
     extract_hashtags,
 )
 from analyzer import AIClient, AnalysisEngine
+from analyzer.prompt_builder import DatasetStatsBundle, compute_dataset_stats
 from benchmark import BenchmarkDraft, StatsBenchmarkEngine, enforce_benchmark_rules
 from providers.facebook_extractor import ExtractionStatus
-from report import ReportGenerator, ReportMeta, render_report_html
+from report import (
+    GeneratedReport,
+    ReportGenerator,
+    ReportMeta,
+    ReportParseError,
+    enforce_anti_fabrication_rules,
+    render_report_html,
+)
 from schemas import (
+    SCHEMA_VERSION,
+    AccountOverviewSection,
+    AudienceAnalysisSection,
+    BenchmarkSection,
+    BrandPositioningSection,
     Completeness,
     CompetitorDataset,
+    CompetitorReport,
     ConfidenceLevel,
+    ContentAnalysisSection,
+    ContentStyleSection,
+    EngagementAnalysisSection,
+    EngagementConfidence,
     EngagementMetrics,
+    ExecutiveSummarySection,
+    KPIScores,
     MIN_POSTS_FOR_BENCHMARK,
     NormalizedPost,
     NormalizedProfile,
     Platform,
     ProfileWithPosts,
+    PublishingPatternSection,
+    RecommendationSection,
+    ScoreEntry,
+    SwotSection,
     TimeRange,
     TimeRangeLabel,
+    ToneOfVoiceSection,
+    VisualAnalysisSection,
 )
 
 from . import jobs as job_store
@@ -60,6 +86,12 @@ logger = logging.getLogger("cic.pipeline")
 # thoi gian nua (Muc 5). Nhan nay KHONG anh huong den viec loc bai viet.
 _NOMINAL_TIME_RANGE_LABEL = TimeRangeLabel.THREE_MONTHS
 _NOMINAL_TIME_RANGE_DAYS = 90
+
+NO_DATA_PLACEHOLDER = "Không đủ dữ liệu"
+"""Dung trong _build_ai_unavailable_draft_report() - gia tri "trung lap"
+tam thoi cho cac truong dinh tinh CHI AI moi viet duoc, se bi
+enforce_anti_fabrication_rules() ghi de bang code hoac fallback rule-based
+ngay sau do (xem report/rules.py)."""
 
 
 class PipelineError(RuntimeError):
@@ -131,10 +163,13 @@ async def run_facebook_analysis(
             ai_client=ai_client,
             max_posts_per_analysis=config.get("max_posts_per_analysis", 60),
         )
-        raw_analysis = await analysis_engine.analyze(dataset)
-        logger.info("analysis_done job_id=%s prompt_version=%s", job_id, raw_analysis.prompt_version)
-
-        generated = ReportGenerator().generate(raw_analysis, job_id)
+        generated, ai_parse_status = await _analyze_with_retry_and_fallback(
+            analysis_engine, dataset, job_id
+        )
+        logger.info(
+            "analysis_done job_id=%s prompt_version=%s ai_parse_status=%s",
+            job_id, generated.prompt_version, ai_parse_status,
+        )
 
         benchmark_engine = StatsBenchmarkEngine()
         enriched_benchmark = benchmark_engine.compare(
@@ -212,6 +247,143 @@ def _data_status_label(status: ExtractionStatus | None, posts_collected: int) ->
     # Fallback khi khong biet status that (khong nen xay ra voi FacebookAdapter
     # hien tai, nhung an toan hon la doan "complete" khi khong chac chan).
     return "complete" if posts_collected >= FACEBOOK_POST_LIMIT else "partial"
+
+
+async def _analyze_with_retry_and_fallback(
+    analysis_engine: AnalysisEngine, dataset: CompetitorDataset, job_id: str
+) -> tuple[GeneratedReport, str]:
+    """Phan 8 (audit) - AI Response Parser: neu AI tra HTML sai dinh dang
+    (thieu <h2>...), retry goi AI THEM DUNG 1 LAN (khong retry vo han). Neu
+    van loi, GIU TOAN BO phan phan tich rule-based (content_pillars/hook/
+    CTA/top posts/publishing_pattern/benchmark deu la code tinh, khong phu
+    thuoc AI - xem report/rules.py) va CHI dat ai_summary ve thong bao ro
+    rang "Phan dien giai AI tam thoi chua kha dung" - KHONG bien toan bo
+    report thanh "Khong du du lieu" (yeu cau ro rang cua Phan 8).
+
+    Tra ve (GeneratedReport, ai_parse_status) voi ai_parse_status la
+    "ok"/"retried_ok"/"fallback_rule_based" - dung de log (Phan 11)."""
+    last_error: Exception | None = None
+    last_stats: DatasetStatsBundle | None = None
+
+    for attempt in (1, 2):
+        try:
+            raw_analysis = await analysis_engine.analyze(dataset)
+            last_stats = raw_analysis.stats
+            generated = ReportGenerator().generate(raw_analysis, job_id)
+            status = "ok" if attempt == 1 else "retried_ok"
+            return generated, status
+        except ReportParseError as exc:
+            last_error = exc
+            logger.warning(
+                "ai_response_parse_failed job_id=%s attempt=%s detail=%s",
+                job_id, attempt, exc,
+            )
+            continue
+
+    logger.error(
+        "ai_response_parse_failed_after_retry job_id=%s last_error=%s - "
+        "dung bao cao rule-based-only (khong bien toan bo report thanh Khong du du lieu)",
+        job_id, last_error,
+    )
+    stats = last_stats or compute_dataset_stats(dataset)
+    generated_at = datetime.now(timezone.utc)
+    draft = _build_ai_unavailable_draft_report()
+    final_report = enforce_anti_fabrication_rules(draft, dataset, stats)
+    html = render_report_html(
+        final_report,
+        dataset,
+        ReportMeta(
+            job_id=job_id,
+            prompt_version="rule-based-fallback",
+            schema_version=SCHEMA_VERSION,
+            generated_at=generated_at,
+        ),
+    )
+    return (
+        GeneratedReport(
+            report=final_report,
+            html=html,
+            job_id=job_id,
+            prompt_version="rule-based-fallback",
+            schema_version=SCHEMA_VERSION,
+            generated_at=generated_at,
+        ),
+        "fallback_rule_based",
+    )
+
+
+def _build_ai_unavailable_draft_report() -> CompetitorReport:
+    """Bo khung CompetitorReport HOP LE toi thieu de dua vao
+    enforce_anti_fabrication_rules() khi AI that bai ca 2 lan - moi truong
+    dinh tinh (chi AI moi viet duoc) dat "Khong du du lieu"/rong,
+    enforce_anti_fabrication_rules se GHI DE toan bo phan tinh duoc bang
+    code (content_pillars, content_type_breakdown, hook/CTA, top posts,
+    publishing_pattern, benchmark, KPI scores, va ai_summary/overview qua
+    fallback rule-based da them o report/rules.py._enforce_executive_summary)."""
+    placeholder_score = ScoreEntry(value=NO_DATA_PLACEHOLDER, note="")
+    return CompetitorReport(
+        executive_summary=ExecutiveSummarySection(
+            ai_summary="",
+            overview="",
+            conclusion=NO_DATA_PLACEHOLDER,
+            data_confidence_note="Phần diễn giải AI tạm thời chưa khả dụng cho lần phân tích này.",
+            scores=KPIScores(
+                content_volume_score=placeholder_score,
+                engagement_score=placeholder_score,
+                consistency_score=placeholder_score,
+                content_diversity_score=placeholder_score,
+                brand_clarity_score=placeholder_score,
+                competitive_threat_score=placeholder_score,
+                ai_confidence=placeholder_score,
+            ),
+        ),
+        account_overview=AccountOverviewSection(
+            platform=Platform.FACEBOOK,
+            display_name="",
+            scale=NO_DATA_PLACEHOLDER,
+            positioning_summary=NO_DATA_PLACEHOLDER,
+            activity_frequency=NO_DATA_PLACEHOLDER,
+            profile_data_confidence="partial",
+        ),
+        content_analysis=ContentAnalysisSection(),
+        tone_of_voice=ToneOfVoiceSection(narrative=NO_DATA_PLACEHOLDER),
+        content_style=ContentStyleSection(
+            storytelling_usage=NO_DATA_PLACEHOLDER,
+            copywriting_style=NO_DATA_PLACEHOLDER,
+            caption_pattern=NO_DATA_PLACEHOLDER,
+        ),
+        visual_analysis=VisualAnalysisSection(
+            color_palette_note=NO_DATA_PLACEHOLDER,
+            design_style=NO_DATA_PLACEHOLDER,
+            layout_pattern=NO_DATA_PLACEHOLDER,
+            thumbnail_style=NO_DATA_PLACEHOLDER,
+            video_style=NO_DATA_PLACEHOLDER,
+        ),
+        publishing_pattern=PublishingPatternSection(
+            posts_per_week_avg=0,
+            most_common_day=NO_DATA_PLACEHOLDER,
+            most_common_hour_range=NO_DATA_PLACEHOLDER,
+            consistency_note=NO_DATA_PLACEHOLDER,
+        ),
+        engagement_analysis=EngagementAnalysisSection(
+            engagement_data_confidence=EngagementConfidence.NONE
+        ),
+        audience_analysis=AudienceAnalysisSection(
+            inferred_persona=NO_DATA_PLACEHOLDER,
+            insight=NO_DATA_PLACEHOLDER,
+            pain_point=NO_DATA_PLACEHOLDER,
+            customer_journey_note=NO_DATA_PLACEHOLDER,
+            inference_basis=NO_DATA_PLACEHOLDER,
+        ),
+        brand_positioning=BrandPositioningSection(
+            usp=NO_DATA_PLACEHOLDER,
+            brand_value=NO_DATA_PLACEHOLDER,
+            differentiation=NO_DATA_PLACEHOLDER,
+        ),
+        swot=SwotSection(),
+        benchmark=BenchmarkSection(),
+        recommendation=RecommendationSection(),
+    )
 
 
 async def _collect_profile_with_posts(

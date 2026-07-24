@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Intelligence Center · LinkPower</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="mic-topbar">
+  <div class="mic-topbar-inner">
+    <div class="mic-brand" id="micBrand">
+      <div class="mic-brand-mark">LP</div>
+      <div class="mic-brand-text">
+        <strong>Market Intelligence Center</strong>
+        <span>LinkPower</span>
+      </div>
+    </div>
+    <span class="badge badge-gray">Production</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ==================================================================
+       COMPONENT: HOME (chua 2 section con: HERO + SEARCH - luon hien/an
+       cung nhau qua 1 wrapper id="micViewHome" de App.showView() dieu
+       khien; tach rieng bang comment de de doc/de tach block khi can
+       chia nhieu HTML Block tren Ladipage).
+       ================================================================== -->
+  <section id="micViewHome">
+
+    <!-- ---- SECTION: HERO ---- -->
+    <div class="mic-hero">
+      <div class="mic-hero-eyebrow"><span class="dot"></span> AI Market Research</div>
+      <h1>Market Intelligence <span>Center</span></h1>
+      <p class="lead">Nhập một chủ đề, hệ thống sẽ tìm kiếm, đọc và tổng hợp thông tin thị trường thành báo cáo Dashboard đầy đủ cho Ban Giám đốc.</p>
+    </div>
+    <!-- /SECTION: HERO -->
+
+    <!-- ---- SECTION: SEARCH ---- -->
+    <div class="mic-search-block">
+      <div class="input-shell">
+        <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></span>
+        <input type="text" id="micKeywordInput" placeholder="Ví dụ: Khóa học HRBP, Khóa học OKR..." autocomplete="off">
+      </div>
+      <div class="mic-search-actions">
+        <button class="btn btn-primary" id="micResearchBtn" style="width:100%">Research</button>
+      </div>
+      <div id="micHomeError" class="mic-error hidden"></div>
+      <div class="mic-examples" id="micExamples"></div>
+    </div>
+    <!-- /SECTION: SEARCH -->
+
+  </section>
+  <!-- /COMPONENT: HOME -->
+
+  <!-- ==================================================================
+       SECTION: LOADING - hien khi dang cho POST /api/research +
+       polling GET /api/report/{job_id}
+       ================================================================== -->
+  <section id="micViewLoading" class="hidden">
+    <div class="mic-loading-view">
+      <div class="mic-loading-panel card">
+        <div class="mic-orb"></div>
+        <div class="mic-loading-keyword" id="micLoadingKeyword">"..."</div>
+        <div class="mic-loading-sub">Đang thực hiện Market Research · vui lòng đợi trong giây lát</div>
+        <div class="mic-stage-list" id="micStageList"></div>
+        <div id="micLoadingError" class="mic-loading-error hidden">
+          <div class="mic-error" id="micLoadingErrorText"></div>
+          <button class="btn btn-ghost btn-sm" id="micBackHomeBtn" style="margin-top:16px;width:100%">Quay lại trang chủ</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- /SECTION: LOADING -->
+
+  <!-- ==================================================================
+       SECTION: DASHBOARD - noi dung ben trong #micDashboardRoot duoc
+       Render.renderDashboard() (app.js) sinh HOAN TOAN tu JSON that cua
+       GET /api/report/{job_id}, khong co du lieu mau/hardcode trong file
+       nay.
+       ================================================================== -->
+  <section id="micViewDashboard" class="hidden">
+    <div class="mic-dashboard" id="micDashboardRoot"></div>
+  </section>
+  <!-- /SECTION: DASHBOARD -->
+
+</main>
+
+<!-- ==================================================================
+     SECTION: COMPETITOR INTELLIGENCE CENTER (Module 2 - Sprint bo sung)
+     Doc lap hoan toan voi App/LoadingController/Render cua Market
+     Intelligence Center o tren (khong dung chung state, khong dung chung
+     view-switching) - chi 1 section moi them vao trang, tu quan ly
+     idle/loading/result/error cua rieng no qua module Cic (app.js).
+     Goi API rieng: Competitor Intelligence Center - Facebook MVP (backend
+     Python/FastAPI rieng, xem CIC.API_BASE trong app.js).
+     ================================================================== -->
+<section id="cicSection" class="cic-section">
+  <div class="container">
+    <div class="cic-header">
+      <div class="mic-hero-eyebrow"><span class="dot"></span> Competitor Intelligence</div>
+      <h2>Competitor Intelligence <span>Center</span></h2>
+      <p class="lead">Phân tích Fanpage Facebook của đối thủ.</p>
+      <p class="cic-note">Hệ thống phân tích tối đa 30 bài viết gần nhất của Fanpage.</p>
+    </div>
+
+    <div class="cic-input-block">
+      <div class="input-shell">
+        <span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></span>
+        <input type="text" id="cicUrlInput" placeholder="https://facebook.com/......" autocomplete="off">
+      </div>
+      <div class="mic-search-actions">
+        <button class="btn btn-primary" id="cicAnalyzeBtn" style="width:100%">Phân tích</button>
+      </div>
+      <div id="cicError" class="mic-error hidden"></div>
+    </div>
+
+    <div id="cicLoading" class="cic-loading hidden">
+      <div class="mic-orb"></div>
+      <div class="cic-loading-text">Đang thu thập dữ liệu...</div>
+    </div>
+
+    <div id="cicResult" class="cic-result hidden"></div>
+  </div>
+</section>
+<!-- /SECTION: COMPETITOR INTELLIGENCE CENTER -->
+
+<!-- ==================================================================
+     SECTION: FOOTER
+     ================================================================== -->
+<footer class="mic-footer">
+  <div class="mic-footer-inner">
+    <span>© LinkPower · Market Intelligence Center</span>
+    <div class="mic-footer-meta">
+      <span>Frontend: <strong>Ladipage Build</strong></span>
+      <span>Truy cập lúc: <strong id="micFooterTime">—</strong></span>
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

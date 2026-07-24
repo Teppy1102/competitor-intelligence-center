@@ -74,8 +74,15 @@ async def main() -> None:
         timeout_seconds=int(os.getenv("APIFY_TIMEOUT_SECONDS", "180")),
     )
 
+    # QUAN TRONG: chi goi qua 1 FacebookAdapter DUY NHAT (khong goi rieng
+    # extractor.extract() nua) - FacebookAdapter tu cache theo URL, dam bao
+    # script nay CHI tao dung 1 Actor run/loai (giong dung pipeline that),
+    # khong ton gap doi credit Apify moi lan chay smoke test (da tung bi loi
+    # nay - goi extract() truc tiep RỒI goi lai qua adapter -> 2 lan run).
+    adapter = FacebookAdapter(extractor=extractor, max_posts=max_posts)
+
     print("Đang gọi Apify (Pages Scraper + Posts Scraper song song)...")
-    result = await extractor.extract(args.url, max_posts)
+    result = await adapter._get_or_extract(args.url)
 
     print()
     print(f"Trạng thái tổng thể: {result.status.value}")
@@ -108,9 +115,9 @@ async def main() -> None:
             f"type={post.type_hint}"
         )
 
-    # Chay qua FacebookAdapter de xem ket qua SAU KHI normalize (Muc 17:
-    # "Hien thi so bai sau normalize").
-    adapter = FacebookAdapter(extractor=extractor, max_posts=max_posts)
+    # Van dung DUNG adapter/cache o tren (khong goi extract() them lan nao
+    # nua) de xem ket qua SAU KHI normalize (Muc 17: "Hien thi so bai sau
+    # normalize").
     try:
         raw_profile = await adapter.resolve_profile(args.url)
         print()

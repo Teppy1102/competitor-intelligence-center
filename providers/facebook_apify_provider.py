@@ -24,6 +24,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -159,7 +160,12 @@ class ApifyFacebookExtractor(FacebookExtractor):
                         max_items=max_items,
                         max_total_charge_usd=self._max_total_charge_usd,
                         run_timeout=None,
-                        timeout=self._timeout_seconds,
+                        # apify_client.types.Timeout = timedelta | Literal[...] -
+                        # KHONG duoc truyen so nguyen tho (gay loi "'<' not
+                        # supported between instances of 'datetime.timedelta'
+                        # and 'int'" khi client so sanh noi bo). Da xac nhan
+                        # bang cach doc thang source cua apify_client.
+                        timeout=timedelta(seconds=self._timeout_seconds),
                     ),
                     timeout=self._timeout_seconds,
                 )

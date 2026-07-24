@@ -468,6 +468,32 @@ async def test_hard_cap_never_exceeds_facebook_post_limit_even_if_requested_high
     assert posts_actor.last_call_kwargs["max_items"] == FACEBOOK_POST_LIMIT
 
 
+# ---------------------------------------------------------------------------
+# Regression: apify_client.types.Timeout = timedelta | Literal[...] - truyen
+# so nguyen tho gay "'<' not supported between instances of 'datetime.timedelta'
+# and 'int'" khi client so sanh noi bo (phat hien tren production that).
+# ---------------------------------------------------------------------------
+
+
+async def test_actor_call_timeout_kwarg_is_timedelta_not_raw_int():
+    from datetime import timedelta
+
+    pages_actor, pages_ds = _ok_pages_setup()
+    posts_actor, posts_ds = _ok_posts_setup([_make_post("1", time="2026-06-20T00:00:00.000Z")])
+    extractor = _build_extractor(
+        pages_actor_client=pages_actor, posts_actor_client=posts_actor,
+        dataset_clients={"pages_ds": pages_ds, "posts_ds": posts_ds},
+    )
+    await extractor.extract("https://www.facebook.com/samplepage", 30)
+
+    for actor_client in (pages_actor, posts_actor):
+        timeout_kwarg = actor_client.last_call_kwargs["timeout"]
+        assert isinstance(timeout_kwarg, timedelta), (
+            f"timeout kwarg phai la timedelta, khong duoc la {type(timeout_kwarg)} "
+            "(day chinh la nguyen nhan loi that tren production)"
+        )
+
+
 def _fake_response(status_code: int):
     class _Resp:
         def __init__(self, code):

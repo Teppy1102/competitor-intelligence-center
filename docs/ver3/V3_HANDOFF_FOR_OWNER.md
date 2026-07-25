@@ -1,52 +1,66 @@
 # V3 Handoff for Owner
 
-**Backend production URL:** `https://competitor-intelligence-center-api.onrender.com`
-(đã chạy Facebook MVP — **Ver 3 chưa deploy tại thời điểm viết tài liệu này**,
-xem `V3_SPRINT_034_FINAL_REPORT.md` mục Blocker).
+**Trạng thái: Ver 3 đã deploy production và UAT thật đã chạy xong (xem `V3_UAT_REPORT.md`).**
 
-## Environment variables cần thêm/xác nhận trên Render Dashboard
+## 1. Backend production
 
-| Biến | Việc cần làm |
-|---|---|
-| `OPENAI_API_KEY` | Xác nhận còn hợp lệ (lấy tại platform.openai.com/api-keys) |
-| `APIFY_API_TOKEN` | Xác nhận còn hợp lệ (lấy tại console.apify.com/settings/integrations) |
+`https://competitor-intelligence-center-api.onrender.com`
 
-Tất cả biến khác (`ALLOWED_ORIGINS`, `DATABASE_URL`, `LINKEDIN_PROVIDER`...)
-đã cố định sẵn trong `render.yaml`, tự áp dụng khi deploy — không cần nhập
-tay. Chi tiết đầy đủ: `V3_PRODUCTION_ENV_GUIDE.md`.
+Database: PostgreSQL (`cic-v3-postgres`) — đã xác nhận `connected: true`,
+`schema_ready: true` qua `GET /api/v3/health/db`.
 
-## File HTML cần copy vào LadiPage
+## 2. File HTML cần copy vào LadiPage
 
-`dist/ladipage/ver3-social-benchmark-embed.html` (bản đầy đủ) — khuyến nghị
-dùng `dist/ladipage/ver3-social-benchmark-embed.min.html` (bản nén) khi dán
-thật vào LadiPage.
+`dist/ladipage/ver3-social-benchmark-embed.html`
 
-## Các bước dán vào LadiPage (tối đa 10 bước)
+## 3. Các bước dán vào LadiPage (≤10 bước)
 
-1. Deploy backend trước (xem `V3_DEPLOYMENT_GUIDE.md`) — file HTML sẽ không
-   chạy được nếu backend chưa phục vụ `/api/v3/*`.
-2. Mở `dist/ladipage/ver3-social-benchmark-embed.min.html` bằng trình soạn thảo, copy toàn bộ nội dung.
+1. Mở `dist/ladipage/ver3-social-benchmark-embed.html` bằng trình soạn thảo (VS Code, Notepad...).
+2. Chọn toàn bộ nội dung (Ctrl+A), copy (Ctrl+C).
 3. Vào LadiPage → trang cần nhúng → thêm 1 khối "HTML/Code" (Custom Code).
-4. Dán toàn bộ nội dung vào khối đó.
-5. Không sửa gì khác trong khối này trừ khi cần đổi Backend URL (xem bước 6).
-6. Nếu Backend URL khác mặc định: tìm ô "Backend API URL" ngay trong khối cấu hình đầu trang preview, nhập URL đúng — hệ thống tự lưu lại (localStorage), không cần sửa code.
-7. Lưu (Save) trang LadiPage.
-8. Bấm Preview — kiểm tra đèn trạng thái kết nối (chấm xanh = OK) ở khối cấu hình.
-9. Publish trang.
-10. Mở trang đã publish trên trình duyệt thật (không phải preview mode) để xác nhận chạy đúng.
+4. Dán toàn bộ nội dung vào khối đó (Ctrl+V).
+5. Không sửa gì khác — ô "Backend API" đầu widget đã điền sẵn đúng URL production.
+6. Lưu (Save) trang LadiPage.
+7. Bấm Preview — kiểm tra chấm tròn "Kết nối OK" ở khối cấu hình đầu trang.
+8. Publish trang.
+9. Mở trang đã publish trên trình duyệt thật (không phải chế độ preview).
+10. Test nhanh theo mục 4 bên dưới.
 
-## Test nhanh sau khi publish (tối đa 5 bước)
+## 4. Test nhanh sau khi publish (≤5 bước)
 
-1. Tạo 1 project test, thêm 1 kênh LinkPower + 1 đối thủ (LinkedIn/TikTok).
-2. Bấm "Chạy Benchmark" — chờ xong, xác nhận có report A–J hiển thị.
-3. Kiểm tra badge trạng thái report (Hoàn tất đầy đủ / một phần / cần nhập thủ công) khớp với dữ liệu thật.
-4. Thử Manual Import 1 file CSV/JSON mẫu cho 1 kênh.
-5. Mở lại trang (F5) — xác nhận project/report cũ vẫn còn (Report History).
+1. Tạo 1 project test, thêm brand LinkPower (kênh Facebook) + 1 đối thủ (kênh LinkedIn/TikTok).
+2. Bấm "Chạy Benchmark" — chờ xong, xác nhận report A–J hiển thị (Facebook tự động qua Apify; LinkedIn/TikTok báo "Cần nhập thủ công").
+3. Thử Manual Import 1 file CSV/JSON mẫu (`docs/ver3/samples/`) cho kênh LinkedIn/TikTok, bấm "Thử lại kênh này".
+4. Kiểm tra badge trạng thái report chuyển đúng (một phần → hoàn tất đầy đủ).
+5. Đóng tab, mở lại trang (F5) — xác nhận project và report cũ vẫn còn (Report History).
 
-## Cách rollback về Ver 2
+## 5. Provider đang dùng trên production
 
-Trên Render Dashboard, đặt biến môi trường `ENABLE_SOCIAL_BENCHMARK=false`
-(không cần deploy lại, service tự áp dụng khi restart) — toàn bộ route
-`/api/v3/*` biến mất ngay, `POST /api/competitor/facebook` (Ver 1/2) không
-đổi. Muốn rollback code hoàn toàn: dùng nút **Rollback** trên Render
-Dashboard, chọn lần deploy trước Sprint V3.3.4.
+| Nền tảng | Provider | Ghi chú |
+|---|---|---|
+| Facebook | `apify` (tự động) | Đã UAT thật, thu thập dữ liệu thành công |
+| LinkedIn | `manual_import` | Upload CSV/JSON theo mẫu `docs/ver3/samples/linkedin_import_template.csv` |
+| TikTok | `manual_import` | Upload CSV/JSON theo mẫu `docs/ver3/samples/tiktok_import_template.csv`. Actor Apify thật (`external`) hiện bị Apify Free Plan chặn (trả demo data) — cần nâng gói Apify trả phí mới dùng được, **chưa tự nâng gói** |
+
+## 6. Cách rollback về Ver 2
+
+Trên Render Dashboard → service `competitor-intelligence-center-api` →
+Environment → đặt `ENABLE_SOCIAL_BENCHMARK=false` → Save (service tự
+redeploy). Toàn bộ route `/api/v3/*` biến mất ngay, `POST
+/api/competitor/facebook` (Ver 1/2) không đổi. Muốn rollback code hoàn
+toàn: nút **Rollback** trên Render Dashboard, chọn lần deploy trước commit
+`1c5697b` (merge Ver 3 đầu tiên).
+
+## 7. Bật LinkedIn/TikTok live provider sau này
+
+Đổi `LINKEDIN_PROVIDER` / `TIKTOK_PROVIDER` từ `manual_import` sang
+`external` trên Render Environment (không cần sửa code) — TikTok cần nâng
+gói Apify trả phí trước (xem mục 5).
+
+## 8. Sự cố ngoài phạm vi kỹ thuật cần bạn xử lý
+
+Domain `linkpower.vn` (gồm `edu.linkpower.vn`) hiện **không resolve DNS
+được** (xác nhận qua Google Public DNS — nameserver Route53 được uỷ quyền
+từ chối mọi truy vấn). Đây là sự cố DNS/registrar, không liên quan Render
+hay code — cần bạn kiểm tra lại cấu hình DNS/hosted zone. Trang LadiPage sẽ
+không truy cập được cho tới khi domain này được khôi phục.

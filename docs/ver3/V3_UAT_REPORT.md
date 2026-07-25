@@ -1,85 +1,85 @@
-# V3 UAT Report — Sprint V3.3.4
+# V3 UAT Report — Sprint 03.5 (Production Deploy + UAT thật)
 
-**Trạng thái tổng thể: UAT THẬT CHƯA CHẠY ĐƯỢC — chưa deploy production.**
+**Trạng thái: Ver 3 đã merge vào `master`, deploy production, và UAT thật đã
+chạy trực tiếp trên `https://competitor-intelligence-center-api.onrender.com`
+(không phải mock/test nội bộ).**
 
-Toàn bộ Ver 3 (`v3/`, LinkedIn/TikTok provider, `docs/ver3/`,
-`dist/ladipage/`) chưa từng được commit/push lên GitHub, nên service Render
-hiện tại chưa phục vụ `/api/v3/*` (xem `V3_DEPLOYMENT_GUIDE.md` mục 0). Các
-UAT 1–7 theo đề bài **chỉ chạy được sau khi push + deploy thành công** và
-sau khi xác nhận `OPENAI_API_KEY`/`APIFY_API_TOKEN` còn hợp lệ trên Render.
-Phần dưới đây ghi lại: (a) những gì ĐÃ xác minh được ở mức local/automated
-trong Sprint này, (b) kế hoạch UAT đầy đủ sẵn sàng chạy ngay sau khi deploy.
+Merge commit: `1c5697b`. 2 lỗi phát hiện qua UAT thật đã được sửa và deploy
+lại ở commit `2b4881c` (xem mục C).
 
-## A. Đã xác minh (local, trước deploy)
+## A. Hạ tầng
 
 | Hạng mục | Kết quả |
 |---|---|
-| Test suite tự động | **321 passed, 5 skipped, 0 failed** (trước Sprint: 281 passed/4 skipped) — 40 test mới cho CORS PUT/DELETE, `partially_completed`/`manual_import_required`/`failed`, Idempotency-Key (unit + integration + Postgres-persistence), frontend gửi header |
-| CORS GET/POST/PUT/DELETE/OPTIONS | Pass (`tests/test_main.py`, preflight + actual request, có/không `ALLOWED_ORIGINS` env) |
-| `partially_completed`/`manual_import_required`/`failed` do backend tính | Pass (`tests/test_v3/test_pipeline_integration.py`, `tests/test_v3/test_routers_integration.py`) |
-| Idempotency-Key: cùng key+payload không tạo trùng, khác payload báo lỗi rõ | Pass (`tests/test_v3/test_idempotency.py`) — cả unit lẫn qua HTTP (create project, run, import) |
-| Idempotency-Key sống sót qua PostgreSQL thật | Viết sẵn (`tests/test_v3/test_db_postgres.py::test_idempotency_key_persists_across_connection_restart`), **skip cục bộ** vì máy dev không có Postgres — sẽ tự chạy trên CI/máy có `DATABASE_URL` thật |
-| HTML embed gửi `Idempotency-Key` cho 4 POST quan trọng, không auto-retry | Pass (`tests/test_frontend/test_ver3_ladipage_embed.py`) |
-| JS syntax hợp lệ (source + minified) | Xác nhận bằng `node --check` |
-| LinkedIn Apify provider (Sprint V3.3.2) | Đã smoke test thật trước đó (5/5 bài, run id `V1VCobr7R63LUdqzk`), **chưa test lại sau Sprint V3.3.4** vì `.env` cục bộ chứa `APIFY_API_TOKEN` bị mất trong sự cố minifier (xem `V3_DEPLOYMENT_GUIDE.md` mục 6) — cần deploy thật hoặc tạo lại `.env` để test lại |
-| TikTok Apify provider | Code đúng, actor ID đọc từ env — nhưng Apify Free Plan account hiện tại từ chối gọi API thật cho actor `apidojo/tiktok-scraper-api` (trả demo payload, bị hệ thống phát hiện và từ chối đúng thiết kế) — **cần Apify plan trả phí để test thật**, ngoài phạm vi Sprint này (không tự nâng cấp gói khi chưa hỏi) |
-| Facebook Apify provider (Ver 2) | Regression pass qua test suite, không đổi hành vi |
+| PostgreSQL `cic-v3-postgres` | ✅ `GET /api/v3/health/db` → `{"backend":"postgres","connected":true,"schema_ready":true}` |
+| `GET /api/health` (Ver 1/2) | ✅ `{"status":"ok",...}` không đổi |
+| `GET /api/v3/health` | ✅ |
+| Full test suite | ✅ 323 passed, 5 skipped, 0 failed (5 skip = Postgres integration test cần `DATABASE_URL` cục bộ, không ảnh hưởng production) |
 
-## B. Kế hoạch UAT đầy đủ (chạy NGAY sau khi deploy + xác nhận secret)
+## B. UAT thật (dữ liệu thật, project test tạo trên production)
 
-### UAT 1 — LinkedIn
-1. Tạo project mới qua `dist/ladipage/ver3-social-benchmark-embed.html` trỏ vào backend production.
-2. Thêm channel LinkedIn LinkPower (`linkedin.com/company/linkpowervn`) + 1 đối thủ.
-3. Set `LINKEDIN_PROVIDER=external` trên Render (hiện mặc định `manual_import`).
-4. Chạy benchmark, giới hạn 5 bài/kênh.
-5. Xác nhận: Actor thật chạy (log Apify có run id), raw payload lưu (`raw_items`), normalize đúng, AI classification chạy (nếu `OPENAI_API_KEY` hợp lệ), metrics/report A–J đầy đủ.
+| # | Hạng mục | Kết quả |
+|---|---|---|
+| 1 | Ver 1 (Market Research, `edu.linkpower.vn/research`) | ⏳ **Không kiểm tra được** — domain `linkpower.vn` đang không resolve DNS (sự cố ngoài phạm vi code/Render, xem `V3_HANDOFF_FOR_OWNER.md` mục 8) |
+| 2 | Ver 2 Facebook (`POST /api/competitor/facebook`, Apify thật) | ✅ HTTP 200, thu thập 30 bài viết thật từ `facebook.com/LinkPowerVN`, AI insight sinh đầy đủ (~108s) |
+| 3 | Tạo project Ver 3 + thêm brand LinkPower + đối thủ + channel Facebook/LinkedIn/TikTok | ✅ Qua cả `curl` trực tiếp và qua chính file HTML LadiPage (browser thật) |
+| 4 | Idempotency-Key (tạo project trùng key) | ✅ Cùng key → trả lại đúng project cũ, không tạo bản ghi mới |
+| 5 | Facebook automatic provider | ✅ Apify thật, `status: collected`, 10-30 bài tuỳ giới hạn project |
+| 6 | LinkedIn manual import | ✅ Backend trả `requires_manual_input` đúng khi chưa có dữ liệu → upload CSV mẫu (`linkedin_import_template.csv`) → preview 2/2 dòng hợp lệ → commit → retry job → `partially_collected` (2/10 bài) |
+| 7 | TikTok manual import (JSON) | ✅ Tương tự, upload JSON 1 dòng tự soạn → commit → retry → `partially_collected` (1/10 bài) |
+| 8 | `partially_completed` | ✅ Project có 1 channel collected + 2 channel requires_manual_input → status tổng `partially_completed` đúng |
+| 9 | Sau khi import + retry cả 2 channel còn lại | ✅ Status tổng chuyển thành `completed` |
+| 10 | Report A–J | ✅ `full_report` có đủ 10 khoá đúng thứ tự (executive_summary...recommendations = A...J), khớp 100% với code render trong HTML |
+| 11 | Report history | ✅ Nhiều version report cùng project, dropdown "Lịch sử report" hiển thị đúng |
+| 12 | CORS | ✅ Preflight + request thật cho GET/POST/PUT/DELETE/OPTIONS + multipart + `Idempotency-Key` header từ origin `https://edu.linkpower.vn` → có `access-control-allow-origin`; origin lạ → không có header này |
+| 13 | Persistence qua redeploy | ✅ Xem mục D |
+| 14 | HTML LadiPage — desktop | ✅ Test qua browser thật (proxy CORS cục bộ, dữ liệu thật từ production), toàn bộ luồng project → brand → channel → run → report chạy đúng |
+| 15 | HTML LadiPage — mobile (375px) | ⚠️ Phát hiện lỗi tràn ngang trang → **đã sửa** (xem mục C) → re-test PASS |
+| 16 | HTML LadiPage — resume project qua F5 | ⚠️ Phát hiện lỗi không tự hiện report cũ → **đã sửa** (xem mục C) → re-test PASS |
+| 17 | Không loading vô hạn / xử lý lỗi rõ ràng | ✅ Test thực tế: khi request `/run` bị lỗi mạng giữa chừng, UI vẫn hiện đúng trạng thái cuối từng kênh (nhờ polling độc lập) thay vì treo vô hạn |
 
-### UAT 2 — TikTok
-Tương tự UAT 1, `TIKTOK_PROVIDER=external`, 5–10 video/kênh — **cần Apify
-plan trả phí trước khi test** (xem mục A).
+## C. Lỗi phát hiện qua UAT thật và đã sửa (commit `2b4881c`)
 
-### UAT 3 — Mixed platform (partially_completed)
-1. Project có cả LinkedIn (chạy được) + TikTok (cố tình để lỗi, vd
-   `TIKTOK_PROVIDER=external` nhưng chưa nâng Apify plan).
-2. Chạy benchmark — xác nhận: LinkedIn vẫn hoàn tất dù TikTok lỗi.
-3. Backend trả `status: "partially_completed"` ở cả response `/run`, `GET
-   /benchmark/projects/:id`, và `full_report.status`.
-4. Frontend hiển thị đúng badge (đã xác nhận qua static test — cần xác nhận
-   lại bằng mắt trên trình duyệt thật sau deploy).
+1. **Report cũ không tự hiện khi mở lại project (F5).** `onProjectReady()`
+   chỉ gọi `fetchReportHistory(true)` (âm thầm nạp dữ liệu dropdown) nhưng
+   không bao giờ gọi `fetchLatestReport()`/hiện card Report — vi phạm đúng
+   yêu cầu UAT "F5 → project/report cũ vẫn còn" trong tài liệu bàn giao. Sửa:
+   sau khi có report history, tự động `fetchLatestReport()` nếu có ít nhất 1
+   report.
+2. **Tràn trang ngang trên mobile (375px).** Các card report (`.lpv3-card`
+   là grid item của `.lpv3-report-grid`, danh sách key-value
+   `.lpv3-kv-list li` là flex item chứa văn bản dài) có `min-width: auto`
+   mặc định của flex/grid item nên không co lại theo cột dù đã có
+   `@media (max-width: 900px)` chuyển về 1 cột — kéo `document.scrollWidth`
+   vượt `clientWidth`, cả trang bị cuộn ngang. Sửa: thêm `min-width: 0` cho
+   `.lpv3-card`, `.lpv3-report-grid`, `.lpv3-kv-list li` — xác nhận bằng
+   `document.documentElement.scrollWidth === clientWidth` trên viewport
+   375px sau fix.
 
-### UAT 4 — Idempotency
-1. Gửi 2 request `POST .../run` với cùng `Idempotency-Key` — xác nhận chỉ 1
-   report được tạo (đã pass ở mức TestClient nội bộ — lặp lại qua HTTP thật
-   với 2 tab trình duyệt/2 request `curl` song song).
-2. Gửi cùng key, payload khác — xác nhận HTTP 422
-   `IdempotencyKeyConflictError`.
+Cả 2 lỗi có test tĩnh mới trong `tests/test_frontend/test_ver3_ladipage_embed.py`.
+`dist/ladipage/ver3-social-benchmark-embed.min.html` đã build lại bằng
+`html-minifier-terser` để đồng bộ.
 
-### UAT 5 — Persistence
-Xem `V3_DEPLOYMENT_GUIDE.md` mục 4 (tạo project + report, redeploy, xác nhận
-dữ liệu còn nguyên trên Postgres thật).
+## D. Persistence qua redeploy
 
-### UAT 6 — LadiPage
-1. Mở `dist/ladipage/ver3-social-benchmark-embed.html` trực tiếp bằng trình
-   duyệt, trỏ Backend URL vào production.
-2. Dán `dist/ladipage/ver3-social-benchmark-embed.min.html` vào 1 trang
-   LadiPage test, publish.
-3. Test desktop + mobile (responsive), test CORS (mở DevTools Network, xác
-   nhận không có lỗi CORS console), test report, report history, Manual
-   Import CSV/JSON.
+1. Tạo project + brand + channel + chạy report qua UAT (mục B) — trước khi
+   fix 2 lỗi ở mục C.
+2. Push fix (commit `2b4881c`) lên `master` → Render tự redeploy.
+3. Sau redeploy: gọi lại `GET /api/v3/benchmark/projects/{id}` — project,
+   brand, channel, report **vẫn còn nguyên** trên PostgreSQL (không dùng
+   SQLite nên không bị mất khi redeploy/restart, khác Render free-tier
+   ephemeral disk).
 
-### UAT 7 — Regression
-`python -m pytest -q` (đã pass 321/5 skip cục bộ) + xác nhận `GET
-/api/health` (Ver 1/2) không đổi + `ENABLE_SOCIAL_BENCHMARK=false` tắt được
-toàn bộ `/api/v3/*` không cần deploy lại (feature flag rollback).
+## E. Test suite
 
-## C. Blocker để chạy UAT thật (theo đúng đề bài, dừng đúng chỗ cần secret)
+**323 passed, 5 skipped, 0 failed** (322 trước khi thêm 1 test cho lỗi #1
+mục C, cộng 1 test cho lỗi #2 mục C).
 
-1. **Cần xác nhận từ chủ sở hữu:** cho phép tôi commit + push toàn bộ thay
-   đổi lên `origin/master` để Render tự deploy (đây sẽ là lần đầu Ver 3 lên
-   production — xem `V3_DEPLOYMENT_GUIDE.md` mục 0).
-2. **Cần xác nhận trên Render Dashboard:** `OPENAI_API_KEY` và
-   `APIFY_API_TOKEN` còn hợp lệ (2 biến `sync: false`, tôi không có quyền
-   xem/set).
-3. **Cần quyết định của chủ sở hữu:** có nâng cấp Apify plan (trả phí) để
-   test TikTok thật hay tạm giữ `TIKTOK_PROVIDER=manual_import` cho production
-   (Manual Import CSV/JSON vẫn hoạt động đầy đủ như fallback).
+## F. Chưa test được / cần quyết định thêm
+
+1. **Ver 1** — không kiểm tra được do domain `linkpower.vn` không resolve DNS
+   (sự cố ngoài phạm vi code/Render — xem `V3_HANDOFF_FOR_OWNER.md` mục 8).
+2. **TikTok Apify thật (`external`)** — vẫn bị chặn bởi Apify Free Plan (trả
+   demo data, bị hệ thống phát hiện và từ chối đúng thiết kế). Manual Import
+   hoạt động đầy đủ như fallback production. Cần quyết định của chủ sở hữu
+   về việc nâng gói Apify (**không tự nâng gói**).

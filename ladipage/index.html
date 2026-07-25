@@ -130,6 +130,82 @@
 <!-- /SECTION: COMPETITOR INTELLIGENCE CENTER -->
 
 <!-- ==================================================================
+     SECTION: SOCIAL COMPETITOR BENCHMARK (Ver 3 - Sprint V3.2)
+     Doc lap hoan toan voi App/Cic o tren - module rieng (Benchmark trong
+     app.js), goi API rieng duoi prefix /api/v3/benchmark/* tren CUNG
+     backend voi Cic (Competitor Intelligence Center). Noi dung ben trong
+     #bmkBrandList/#bmkJobList/#bmkReportRoot do Benchmark.render*() sinh
+     HOAN TOAN tu JSON that, khong co du lieu mau/hardcode trong file nay.
+     ================================================================== -->
+<section id="benchmarkSection" class="cic-section">
+  <div class="container">
+    <div class="cic-header">
+      <div class="mic-hero-eyebrow"><span class="dot"></span> Social Competitor Benchmark</div>
+      <h2>Social Competitor <span>Benchmark</span></h2>
+      <p class="lead">So sánh LinkPower với nhiều đối thủ trên Facebook, LinkedIn, TikTok trong cùng 1 dự án.</p>
+    </div>
+
+    <!-- Buoc 1: Tao du an -->
+    <div class="card card-pad bmk-form-card" id="bmkProjectCard">
+      <div class="card-header"><div class="card-title-group"><div class="card-title">Bước 1 — Tạo dự án Benchmark</div></div></div>
+      <div class="card-body">
+        <div class="bmk-field-grid">
+          <label>Tên dự án
+            <input type="text" id="bmkProjectName" placeholder="VD: Benchmark truyền thông đào tạo Q3">
+          </label>
+          <label>Mục tiêu nghiên cứu (tuỳ chọn)
+            <input type="text" id="bmkObjective" placeholder="VD: So sánh content và engagement">
+          </label>
+          <label>Khoảng thời gian (ngày)
+            <input type="number" id="bmkDateRange" value="90" min="7" max="365">
+          </label>
+          <label>Số bài/video tối đa mỗi kênh
+            <input type="number" id="bmkContentLimit" value="30" min="5" max="50">
+          </label>
+        </div>
+        <button class="btn btn-primary" id="bmkCreateProjectBtn">Tạo dự án</button>
+        <div id="bmkProjectError" class="mic-error hidden"></div>
+      </div>
+    </div>
+
+    <!-- Buoc 2-3: Thuong hieu & kenh -->
+    <div class="card card-pad hidden" id="bmkBrandCard">
+      <div class="card-header"><div class="card-title-group"><div class="card-title">Bước 2-3 — Thêm LinkPower &amp; đối thủ</div></div></div>
+      <div class="card-body">
+        <div class="bmk-brand-row">
+          <input type="text" id="bmkBrandName" placeholder="Tên thương hiệu (VD: LinkPower, Đối thủ A...)">
+          <select id="bmkBrandType">
+            <option value="linkpower">LinkPower</option>
+            <option value="competitor">Đối thủ</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="bmkAddBrandBtn">+ Thêm thương hiệu</button>
+        </div>
+        <div id="bmkBrandError" class="mic-error hidden"></div>
+        <div id="bmkBrandList" class="bmk-brand-list"></div>
+      </div>
+    </div>
+
+    <!-- Buoc 4: Chay phan tich -->
+    <div class="card card-pad hidden" id="bmkRunCard">
+      <div class="card-header"><div class="card-title-group"><div class="card-title">Bước 4 — Chạy phân tích</div></div></div>
+      <div class="card-body">
+        <button class="btn btn-primary" id="bmkRunBtn">Chạy Benchmark</button>
+        <div id="bmkRunError" class="mic-error hidden"></div>
+        <div id="bmkRunLoading" class="cic-loading hidden">
+          <div class="mic-orb"></div>
+          <div class="cic-loading-text">Đang thu thập dữ liệu, phân tích và tính benchmark...</div>
+        </div>
+        <div id="bmkJobList" class="bmk-job-list"></div>
+      </div>
+    </div>
+
+    <!-- Buoc 5: Report -->
+    <div id="bmkReportRoot" class="bmk-report hidden"></div>
+  </div>
+</section>
+<!-- /SECTION: SOCIAL COMPETITOR BENCHMARK -->
+
+<!-- ==================================================================
      SECTION: FOOTER
      ================================================================== -->
 <footer class="mic-footer">

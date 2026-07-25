@@ -9,3 +9,12 @@ pydantic==2.13.4
 beautifulsoup4==4.15.0
 openai==2.46.0
 apify-client==3.1.0
+
+# Sprint V3.2 - can cho FastAPI UploadFile/Form (POST /api/v3/benchmark/import)
+python-multipart==0.0.32
+
+# Sprint V3.3.1 - PostgreSQL production persistence (v3/db.py chon backend
+# qua DATABASE_URL). Van can cai o production du local/test dung SQLite
+# (xem docs/ver3/V3_DATABASE_MIGRATION_GUIDE.md) vi Render production luon
+# chay voi DATABASE_URL da dat.
+psycopg2-binary==2.9.12

@@ -16,6 +16,7 @@ can goi is_benchmark_eligible() tu day.
 
 from .eligibility import benchmark_ineligibility_reason, is_benchmark_eligible
 from .interface import BenchmarkDraft, BenchmarkEngine
+from .metric_registry import METRIC_REGISTRY, MetricDefinition, get_overall_score_weights
 from .rule_based import StatsBenchmarkEngine
 from .rules import enforce_benchmark_rules
 
@@ -26,4 +27,8 @@ __all__ = [
     "benchmark_ineligibility_reason",
     "enforce_benchmark_rules",
     "StatsBenchmarkEngine",
+    # Sprint V3.1 - docs/ver3/V3_BENCHMARK_SPEC.md
+    "MetricDefinition",
+    "METRIC_REGISTRY",
+    "get_overall_score_weights",
 ]

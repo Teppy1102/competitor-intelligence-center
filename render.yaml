@@ -34,3 +34,53 @@ services:
         value: "180"
       - key: PYTHON_VERSION
         value: 3.12.3
+      # Sprint V3.2 - Social Competitor Benchmark.
+      - key: ENABLE_SOCIAL_BENCHMARK
+        value: "true"
+      # Sprint V3.3.2 - Apify Actor that co san cho LinkedIn/TikTok
+      # (LinkedIn: da smoke test that; TikTok: Actor tu choi goi qua API tren
+      # goi Apify Free, can nang cap goi truoc khi doi sang "external" -
+      # xem docs/ver3/V3_SPRINT_032_REPORT.md muc E). Van giu mac dinh
+      # "manual_import" tren production cho toi khi LinkPower xac nhan
+      # chuyen - doi 2 dong duoi thanh "external" khi san sang, KHONG can
+      # doi code.
+      - key: LINKEDIN_PROVIDER
+        value: manual_import
+      - key: TIKTOK_PROVIDER
+        value: manual_import
+      - key: APIFY_LINKEDIN_ACTOR_ID
+        value: harvestapi/linkedin-company-posts
+      - key: APIFY_TIKTOK_ACTOR_ID
+        value: apidojo/tiktok-scraper-api
+      - key: APIFY_RUN_TIMEOUT_SECONDS
+        value: "180"
+      # Sprint V3.3.1 - PostgreSQL production persistence. Gan thang connection
+      # string cua database "cic-v3-postgres" khai bao o muc `databases:`
+      # ben duoi - khi bien nay duoc dat, v3/db.py TU DONG chuyen sang
+      # PostgreSQL cho toan bo Ver 3 (bo qua SQLite/data/v3.db hoan toan),
+      # giai quyet blocker #1 cua Sprint V3.2 (SQLite mat du lieu moi lan
+      # deploy/restart tren goi free khong co persistent disk - xem
+      # docs/ver3/V3_SPRINT_02_REPORT.md muc F). Render tu dong bien DATABASE_URL
+      # sang giao thuc "postgresql://" ma psycopg2 doc thang duoc, khong can
+      # rewrite scheme thu cong.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cic-v3-postgres
+          property: connectionString
+      # Sprint V3.3.4 - CORS production (GET/POST/PUT/DELETE/OPTIONS) chi
+      # cho phep domain LadiPage that, KHONG dung wildcard "*" (xem
+      # main.py:_parse_allowed_origins()). Idempotency-Key TTL cho bang
+      # idempotency_keys (v3/services/idempotency_service.py).
+      - key: ALLOWED_ORIGINS
+        value: https://edu.linkpower.vn
+      - key: IDEMPOTENCY_KEY_TTL_HOURS
+        value: "24"
+
+databases:
+  # Goi "free" cua Render Postgres: 1GB storage, het han sau 90 ngay neu
+  # khong nang cap - du dung cho giai doan UAT noi bo/demo Sprint V3.3.1,
+  # PHAI nang cap len goi tra phi truoc khi cong bo cho nguoi dung that lau
+  # dai (xem docs/ver3/V3_DATABASE_MIGRATION_GUIDE.md muc "Van hanh production").
+  - name: cic-v3-postgres
+    plan: free
+    region: singapore

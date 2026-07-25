@@ -12,5 +12,6 @@
   "apify_facebook_pages_actor": "apify/facebook-pages-scraper",
   "apify_facebook_posts_actor": "apify/facebook-posts-scraper",
   "apify_timeout_seconds": 180,
-  "ai_provider": "openai"
+  "ai_provider": "openai",
+  "enable_social_benchmark": true
 }

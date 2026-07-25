@@ -63,6 +63,22 @@ class RawPost:
     # tu trang (khong phai doan/uoc luong) - dung de tinh engagement_confidence.
     engagement_reliable: bool = False
 
+    # Sprint V3.2 - 2 field optional MOI, chi TikTok dung that (Facebook
+    # khong co khai niem nay nen luon None) - them field optional KHONG pha
+    # vo Adapter/test hien co (dataclass, khong phai Pydantic extra="forbid").
+    save_count: int | None = None
+    duration_seconds: int | None = None
+
+    # Sprint V3.3.2 - JSON goc (chua qua mapping) tu Actor/API cua provider,
+    # neu co - dung de collection_service.py luu vao raw_items.raw_payload
+    # TRUOC KHI normalize (de bai muc 10 "Luu raw payload truoc khi
+    # normalize"), giu du object long nhau (vd LinkedIn: author/engagement/
+    # header/contentAttributes/postImages) ma cac field phang o tren khong
+    # the hien het. None neu provider khong co JSON goc (vd Manual Import/
+    # Mock) - khong bat buoc, field optional them KHONG pha vo Adapter/test
+    # hien co (giong 2 field tren).
+    raw_source_item: dict | None = None
+
 
 class AdapterError(RuntimeError):
     """Loi chung khi Adapter khong the hoan tat yeu cau - vd URL khong hop
@@ -77,6 +93,16 @@ class DataUnavailableError(AdapterError):
     thong (timeout/bug). Router tra thong bao ro rang cho nguoi dung, KHONG
     bao gio fallback sang du lieu bia/gia lap (yeu cau nguoi dung: 'tuyet doi
     khong tao so lieu thay the')."""
+
+
+class AdapterCapabilityError(AdapterError):
+    """Sprint V3.1 (V3_ARCHITECTURE.md muc 5/8) - KHAC voi DataUnavailableError:
+    dung khi 1 nen tang DA duoc nhan dien qua detect() (vd LinkedIn/TikTok)
+    nhung Adapter CHUA co provider thu that o Sprint nay (contract-only).
+    Router/pipeline bat loi nay va danh dau CollectionJob.status =
+    "requires_manual_input" cho DUNG channel do, KHONG chan cac channel khac
+    trong cung 1 benchmark run (PLATFORM_STRATEGY.md muc 3: 'tra loi ro rang
+    va dung ngu nghia', khong phai loi ky thuat kho hieu)."""
 
 
 class PlatformAdapter(ABC):

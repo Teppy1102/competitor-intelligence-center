@@ -1,0 +1,1407 @@
+<!--
+  Social Competitor Benchmark (Ver 3) - Ladipage Standalone Embed
+  Sprint V3.3.3 - dist/ladipage/ver3-social-benchmark-embed.html
+
+  1 FILE DUY NHAT - copy toan bo noi dung file nay dan vao 1 o "HTML" /
+  "Embed Code" / "Custom Code" cua Ladipage la chay duoc ngay, KHONG can
+  npm/build, KHONG can sua them app.js sau khi ban giao.
+
+  An toan nhung:
+    - KHONG chua bat ky secret nao (Apify token/OpenAI key/DB credential) -
+      trinh duyet CHI goi Backend API (/api/v3/benchmark/*), KHONG bao gio
+      goi Apify/OpenAI truc tiep.
+    - Toan bo CSS dung prefix "lpv3-", moi rule deu nam duoi 1 goc duy nhat
+      #lpv3-root (khong co selector the tho/global nao vuot ra ngoai) - an
+      toan khi nhung vao trang co san CSS khac cua Ladipage.
+    - Toan bo JS nam trong 1 IIFE duy nhat, khong ro ri bien global.
+    - Khong luu bat ky secret nao vao localStorage (chi luu Backend URL -
+      khong phai secret - va project_id gan nhat de tien tiep tuc).
+
+  Cau hinh DUY NHAT can biet: khoi "Cau hinh ket noi" o dau widget (input
+  Backend API URL) - da dien san URL production that
+  (https://competitor-intelligence-center-api.onrender.com). Xem
+  docs/ver3/V3_LADIPAGE_INSTALL_GUIDE.md de biet cach dan vao Ladipage.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Competitor Benchmark · LinkPower</title>
+<style>
+/* ==========================================================================
+   lpv3- Ladipage Standalone Embed - style.css noi tuyen
+   TOAN BO rule nam duoi #lpv3-root/.lpv3-app - khong co selector the tho
+   (body/input/button/*...) khong duoc scope, an toan voi CSS co san cua
+   trang chua no.
+   ========================================================================== */
+#lpv3-root, #lpv3-root * { box-sizing: border-box; }
+#lpv3-root {
+  --lpv3-navy-900: #0a1a33;
+  --lpv3-navy-800: #0f2544;
+  --lpv3-navy-700: #16305c;
+  --lpv3-white: #ffffff;
+  --lpv3-gray-50: #f7f8fa;
+  --lpv3-gray-100: #eef1f5;
+  --lpv3-gray-200: #e3e7ee;
+  --lpv3-gray-300: #cdd4df;
+  --lpv3-gray-400: #9aa5b5;
+  --lpv3-gray-500: #6b7686;
+  --lpv3-gray-600: #4a5568;
+  --lpv3-gray-700: #364155;
+  --lpv3-blue: #2563eb;
+  --lpv3-blue-light: #eaf1ff;
+  --lpv3-green: #15803d;
+  --lpv3-green-light: #eafaf0;
+  --lpv3-orange: #c2660a;
+  --lpv3-orange-light: #fff4e5;
+  --lpv3-red: #b42318;
+  --lpv3-red-light: #fef3f2;
+  --lpv3-r-sm: 8px;
+  --lpv3-r-md: 12px;
+  --lpv3-r-lg: 18px;
+  --lpv3-r-pill: 999px;
+  --lpv3-shadow-sm: 0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+  --lpv3-shadow-md: 0 4px 14px rgba(16,24,40,.08), 0 2px 4px rgba(16,24,40,.04);
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lpv3-gray-700);
+  background: var(--lpv3-gray-50);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 16px 64px;
+  -webkit-font-smoothing: antialiased;
+}
+#lpv3-root h1, #lpv3-root h2, #lpv3-root h3, #lpv3-root h4 { margin: 0; font-weight: 700; color: var(--lpv3-navy-900); letter-spacing: -.01em; }
+#lpv3-root p { margin: 0; }
+#lpv3-root ul, #lpv3-root ol { margin: 0; padding: 0; list-style: none; }
+#lpv3-root a { color: var(--lpv3-blue); text-decoration: none; }
+#lpv3-root a:hover { text-decoration: underline; }
+#lpv3-root button { font-family: inherit; }
+#lpv3-root .lpv3-hidden { display: none !important; }
+#lpv3-root .lpv3-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* ---- Layout ---- */
+#lpv3-root .lpv3-header { text-align: center; padding: 8px 0 24px; }
+#lpv3-root .lpv3-header .lpv3-eyebrow { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--lpv3-r-pill); background: var(--lpv3-blue-light); color: var(--lpv3-blue); font-size: 11px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
+#lpv3-root .lpv3-header h1 { font-size: 26px; }
+#lpv3-root .lpv3-header p { margin-top: 6px; color: var(--lpv3-gray-500); font-size: 13px; }
+
+#lpv3-root .lpv3-card { background: var(--lpv3-white); border: 1px solid var(--lpv3-gray-200); border-radius: var(--lpv3-r-lg); box-shadow: var(--lpv3-shadow-sm); padding: 18px 20px; margin-bottom: 16px; }
+#lpv3-root .lpv3-card-title { font-size: 15px; font-weight: 700; color: var(--lpv3-navy-900); display: flex; align-items: center; gap: 8px; }
+#lpv3-root .lpv3-card-title .lpv3-step-no { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--lpv3-navy-800); color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+#lpv3-root .lpv3-card-sub { font-size: 12px; color: var(--lpv3-gray-500); margin-top: 3px; }
+#lpv3-root .lpv3-card-body { margin-top: 14px; }
+
+/* ---- Config bar (khoi cau hinh DUY NHAT) ---- */
+#lpv3-root .lpv3-config { background: var(--lpv3-navy-900); border-radius: var(--lpv3-r-lg); padding: 12px 16px; margin-bottom: 16px; color: #fff; }
+#lpv3-root .lpv3-config-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+#lpv3-root .lpv3-config-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: rgba(255,255,255,.6); flex-shrink: 0; }
+#lpv3-root .lpv3-config input[type="text"] { flex: 1; min-width: 220px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #fff; border-radius: var(--lpv3-r-sm); padding: 8px 10px; font-size: 12px; }
+#lpv3-root .lpv3-config input[type="text"]::placeholder { color: rgba(255,255,255,.4); }
+#lpv3-root .lpv3-config-status { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,.7); }
+#lpv3-root .lpv3-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lpv3-gray-400); flex-shrink: 0; }
+#lpv3-root .lpv3-dot.lpv3-ok { background: #4ade80; }
+#lpv3-root .lpv3-dot.lpv3-err { background: #f87171; }
+#lpv3-root .lpv3-config-note { margin-top: 6px; font-size: 10.5px; color: rgba(255,255,255,.45); }
+
+/* ---- Buttons / inputs ---- */
+#lpv3-root .lpv3-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: var(--lpv3-r-sm); font-size: 13px; font-weight: 650; padding: 10px 16px; cursor: pointer; transition: opacity .15s, box-shadow .15s; white-space: nowrap; }
+#lpv3-root .lpv3-btn:disabled { opacity: .55; cursor: not-allowed; }
+#lpv3-root .lpv3-btn-primary { background: linear-gradient(180deg, var(--lpv3-navy-700), var(--lpv3-navy-800)); color: #fff; box-shadow: 0 6px 16px rgba(15,37,68,.18); }
+#lpv3-root .lpv3-btn-primary:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(15,37,68,.24); }
+#lpv3-root .lpv3-btn-ghost { background: var(--lpv3-white); color: var(--lpv3-gray-700); border: 1px solid var(--lpv3-gray-300); }
+#lpv3-root .lpv3-btn-ghost:hover:not(:disabled) { border-color: var(--lpv3-blue); color: var(--lpv3-blue); }
+#lpv3-root .lpv3-btn-danger { background: var(--lpv3-red-light); color: var(--lpv3-red); }
+#lpv3-root .lpv3-btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 7px; }
+#lpv3-root .lpv3-input, #lpv3-root .lpv3-select, #lpv3-root .lpv3-textarea {
+  width: 100%; border: 1px solid var(--lpv3-gray-300); border-radius: var(--lpv3-r-sm);
+  padding: 9px 11px; font-size: 13px; color: var(--lpv3-gray-700); background: var(--lpv3-white);
+}
+#lpv3-root .lpv3-input:focus, #lpv3-root .lpv3-select:focus, #lpv3-root .lpv3-textarea:focus { outline: none; border-color: var(--lpv3-blue); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+#lpv3-root .lpv3-field { display: flex; flex-direction: column; gap: 5px; }
+#lpv3-root .lpv3-field label { font-size: 11.5px; font-weight: 650; color: var(--lpv3-gray-500); }
+#lpv3-root .lpv3-field-hint { font-size: 11px; color: var(--lpv3-gray-400); }
+#lpv3-root .lpv3-field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+#lpv3-root .lpv3-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+#lpv3-root .lpv3-row > * { flex: 1; min-width: 160px; }
+
+/* ---- Badges / status pills ---- */
+#lpv3-root .lpv3-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--lpv3-r-pill); font-size: 11px; font-weight: 700; line-height: 1.4; }
+#lpv3-root .lpv3-badge-blue { background: var(--lpv3-blue-light); color: var(--lpv3-blue); }
+#lpv3-root .lpv3-badge-green { background: var(--lpv3-green-light); color: var(--lpv3-green); }
+#lpv3-root .lpv3-badge-orange { background: var(--lpv3-orange-light); color: var(--lpv3-orange); }
+#lpv3-root .lpv3-badge-red { background: var(--lpv3-red-light); color: var(--lpv3-red); }
+#lpv3-root .lpv3-badge-gray { background: var(--lpv3-gray-100); color: var(--lpv3-gray-600); }
+
+/* ---- Alerts ---- */
+#lpv3-root .lpv3-alert { border-radius: var(--lpv3-r-md); padding: 11px 14px; font-size: 12.5px; font-weight: 550; margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; }
+#lpv3-root .lpv3-alert-error { background: var(--lpv3-red-light); color: var(--lpv3-red); border: 1px solid #f5c2bd; }
+#lpv3-root .lpv3-alert-warn { background: var(--lpv3-orange-light); color: var(--lpv3-orange); border: 1px solid #f6d9ad; }
+#lpv3-root .lpv3-alert-info { background: var(--lpv3-blue-light); color: var(--lpv3-blue); border: 1px solid #c9dcfb; }
+#lpv3-root .lpv3-alert-ok { background: var(--lpv3-green-light); color: var(--lpv3-green); border: 1px solid #b8ecc8; }
+#lpv3-root .lpv3-alert .lpv3-alert-close { margin-left: auto; cursor: pointer; font-weight: 700; opacity: .6; flex-shrink: 0; }
+#lpv3-root .lpv3-alert .lpv3-alert-close:hover { opacity: 1; }
+#lpv3-root .lpv3-top-banner { position: sticky; top: 8px; z-index: 5; }
+
+/* ---- Brand / channel blocks ---- */
+#lpv3-root .lpv3-brand-block { border: 1px solid var(--lpv3-gray-200); border-radius: var(--lpv3-r-md); padding: 14px; margin-top: 12px; }
+#lpv3-root .lpv3-brand-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+#lpv3-root .lpv3-brand-name { font-weight: 700; color: var(--lpv3-navy-900); font-size: 13.5px; }
+#lpv3-root .lpv3-channel-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+#lpv3-root .lpv3-channel-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--lpv3-gray-50); border-radius: var(--lpv3-r-sm); font-size: 12px; flex-wrap: wrap; }
+#lpv3-root .lpv3-channel-url { flex: 1; min-width: 160px; color: var(--lpv3-gray-700); word-break: break-all; }
+#lpv3-root .lpv3-channel-add-row { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+#lpv3-root .lpv3-channel-add-row input { flex: 1; min-width: 200px; }
+
+/* ---- Job / progress list ---- */
+#lpv3-root .lpv3-job-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+#lpv3-root .lpv3-job-row { border: 1px solid var(--lpv3-gray-200); border-radius: var(--lpv3-r-md); padding: 10px 12px; }
+#lpv3-root .lpv3-job-row-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#lpv3-root .lpv3-job-channel { font-weight: 700; font-size: 12.5px; color: var(--lpv3-navy-900); flex: 1; min-width: 140px; }
+#lpv3-root .lpv3-job-meta { font-size: 11px; color: var(--lpv3-gray-500); margin-top: 4px; }
+#lpv3-root .lpv3-job-reason { font-size: 11.5px; color: var(--lpv3-orange); margin-top: 6px; }
+#lpv3-root .lpv3-job-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+#lpv3-root .lpv3-progress-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--lpv3-gray-300); border-top-color: var(--lpv3-blue); animation: lpv3-spin .8s linear infinite; display: inline-block; flex-shrink: 0; }
+@keyframes lpv3-spin { to { transform: rotate(360deg); } }
+
+/* ---- Import panel ---- */
+#lpv3-root .lpv3-import-panel { margin-top: 10px; padding: 12px; border: 1px dashed var(--lpv3-gray-300); border-radius: var(--lpv3-r-md); background: var(--lpv3-gray-50); }
+#lpv3-root .lpv3-import-hint { font-size: 11px; color: var(--lpv3-gray-500); margin-bottom: 8px; }
+#lpv3-root .lpv3-import-hint code { background: var(--lpv3-gray-100); padding: 1px 5px; border-radius: 4px; font-size: 10.5px; }
+#lpv3-root .lpv3-table-wrap { overflow-x: auto; border: 1px solid var(--lpv3-gray-200); border-radius: var(--lpv3-r-sm); margin-top: 8px; }
+#lpv3-root table.lpv3-table { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 480px; }
+#lpv3-root table.lpv3-table thead th { text-align: left; background: var(--lpv3-gray-50); color: var(--lpv3-gray-500); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--lpv3-gray-200); white-space: nowrap; }
+#lpv3-root table.lpv3-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--lpv3-gray-100); vertical-align: top; }
+#lpv3-root table.lpv3-table tbody tr:last-child td { border-bottom: none; }
+
+/* ---- Report ---- */
+#lpv3-root .lpv3-report-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+#lpv3-root .lpv3-report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+#lpv3-root .lpv3-report-grid .lpv3-span-2 { grid-column: span 2; }
+#lpv3-root .lpv3-report-section-title { font-size: 13.5px; font-weight: 700; color: var(--lpv3-navy-900); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+#lpv3-root .lpv3-report-section-title .lpv3-tag { font-size: 10px; background: var(--lpv3-navy-800); color: #fff; border-radius: 5px; padding: 1px 6px; font-weight: 700; }
+#lpv3-root .lpv3-kv-list { display: flex; flex-direction: column; gap: 6px; }
+#lpv3-root .lpv3-kv-list li { display: flex; gap: 8px; font-size: 12.5px; }
+#lpv3-root .lpv3-kv-list li b { flex-shrink: 0; color: var(--lpv3-gray-600); font-weight: 650; min-width: 130px; }
+#lpv3-root .lpv3-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+#lpv3-root .lpv3-chip { background: var(--lpv3-blue-light); color: var(--lpv3-blue); border-radius: var(--lpv3-r-pill); padding: 3px 10px; font-size: 11px; font-weight: 650; }
+#lpv3-root .lpv3-empty { color: var(--lpv3-gray-400); font-size: 12px; font-style: italic; }
+#lpv3-root .lpv3-bar-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 11.5px; }
+#lpv3-root .lpv3-bar-label { flex: 0 0 42%; color: var(--lpv3-gray-600); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lpv3-root .lpv3-bar-track { flex: 1; height: 6px; border-radius: var(--lpv3-r-pill); background: var(--lpv3-gray-100); overflow: hidden; }
+#lpv3-root .lpv3-bar-fill { height: 100%; background: linear-gradient(90deg, var(--lpv3-blue), var(--lpv3-navy-700)); border-radius: var(--lpv3-r-pill); }
+#lpv3-root .lpv3-bar-pct { flex: 0 0 40px; text-align: right; color: var(--lpv3-gray-500); }
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  #lpv3-root .lpv3-field-grid { grid-template-columns: 1fr; }
+  #lpv3-root .lpv3-report-grid { grid-template-columns: 1fr; }
+  #lpv3-root .lpv3-report-grid .lpv3-span-2 { grid-column: span 1; }
+}
+@media (max-width: 620px) {
+  #lpv3-root { padding: 12px 10px 48px; font-size: 13.5px; }
+  #lpv3-root .lpv3-header h1 { font-size: 21px; }
+  #lpv3-root .lpv3-card { padding: 14px; }
+  #lpv3-root .lpv3-row { flex-direction: column; align-items: stretch; }
+  #lpv3-root .lpv3-config-row { flex-direction: column; align-items: stretch; }
+  #lpv3-root .lpv3-config input[type="text"] { min-width: 0; }
+}
+</style>
+</head>
+<body>
+
+<div id="lpv3-root" class="lpv3-app">
+
+  <!-- ==================================================================
+       KHOI CAU HINH DUY NHAT (de bai muc 5/6) - Backend API URL. Day la
+       CHO DUY NHAT trong toan bo file can sua khi doi domain Backend -
+       moi noi khac trong JS deu doc lai gia tri nay qua state.apiBase.
+       ================================================================== -->
+  <div class="lpv3-config">
+    <div class="lpv3-config-row">
+      <span class="lpv3-config-label">Backend API</span>
+      <input type="text" id="lpv3-api-base-input" placeholder="https://competitor-intelligence-center-api.onrender.com">
+      <button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm" id="lpv3-check-conn-btn">Kiểm tra kết nối</button>
+      <span class="lpv3-config-status"><span class="lpv3-dot" id="lpv3-conn-dot"></span><span id="lpv3-conn-text">Chưa kiểm tra</span></span>
+    </div>
+    <div class="lpv3-config-note">Chỉ trình duyệt gọi tới URL này (không gọi Apify/OpenAI trực tiếp) — không cần nhập bất kỳ mật khẩu/API key nào ở đây.</div>
+  </div>
+
+  <div id="lpv3-top-banner" class="lpv3-top-banner"></div>
+
+  <div class="lpv3-header">
+    <span class="lpv3-eyebrow">Social Competitor Benchmark</span>
+    <h1>So sánh LinkPower với đối thủ</h1>
+    <p>Facebook · LinkedIn · TikTok — tạo dự án, thêm kênh, chạy phân tích và xem report đầy đủ A–J.</p>
+  </div>
+
+  <!-- STEP 1: Project -->
+  <div class="lpv3-card" id="lpv3-step-project">
+    <div class="lpv3-card-title"><span class="lpv3-step-no">1</span> Tạo dự án Benchmark</div>
+    <div class="lpv3-card-sub">Đặt tên dự án và khoảng thời gian/số bài muốn phân tích.</div>
+    <div class="lpv3-card-body">
+      <div class="lpv3-field-grid">
+        <div class="lpv3-field"><label>Tên dự án *</label><input class="lpv3-input" id="lpv3-project-name" placeholder="VD: Benchmark truyền thông Q3"></div>
+        <div class="lpv3-field"><label>Mục tiêu (tuỳ chọn)</label><input class="lpv3-input" id="lpv3-project-objective" placeholder="VD: So sánh content và engagement"></div>
+        <div class="lpv3-field"><label>Khoảng thời gian (ngày)</label><input class="lpv3-input" type="number" id="lpv3-project-range" value="90" min="1" max="365"></div>
+        <div class="lpv3-field"><label>Số bài/video tối đa mỗi kênh</label><input class="lpv3-input" type="number" id="lpv3-project-limit" value="30" min="1" max="50"></div>
+      </div>
+      <div style="margin-top:12px"><button type="button" class="lpv3-btn lpv3-btn-primary" id="lpv3-create-project-btn">Tạo dự án</button>
+      <button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm lpv3-hidden" id="lpv3-new-project-btn" style="margin-left:8px">+ Dự án mới</button></div>
+      <div id="lpv3-project-alert"></div>
+      <div id="lpv3-project-info" class="lpv3-hidden" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Brands & Channels -->
+  <div class="lpv3-card lpv3-hidden" id="lpv3-step-brands">
+    <div class="lpv3-card-title"><span class="lpv3-step-no">2</span> Thêm LinkPower &amp; đối thủ</div>
+    <div class="lpv3-card-sub">Thêm LinkPower và nhiều đối thủ, mỗi thương hiệu có thể có nhiều kênh Facebook/LinkedIn/TikTok.</div>
+    <div class="lpv3-card-body">
+      <div class="lpv3-row">
+        <div class="lpv3-field"><label>Tên thương hiệu</label><input class="lpv3-input" id="lpv3-brand-name" placeholder="VD: LinkPower, Đối thủ A..."></div>
+        <div class="lpv3-field" style="max-width:180px"><label>Loại</label>
+          <select class="lpv3-select" id="lpv3-brand-type"><option value="linkpower">LinkPower</option><option value="competitor">Đối thủ</option></select>
+        </div>
+        <button type="button" class="lpv3-btn lpv3-btn-ghost" id="lpv3-add-brand-btn">+ Thêm thương hiệu</button>
+      </div>
+      <div id="lpv3-brand-alert"></div>
+      <div id="lpv3-brand-list"></div>
+
+      <div style="margin-top:16px"><button type="button" class="lpv3-btn lpv3-btn-primary" id="lpv3-goto-run-btn">Tiếp tục — Chạy Benchmark</button></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Run -->
+  <div class="lpv3-card lpv3-hidden" id="lpv3-step-run">
+    <div class="lpv3-card-title"><span class="lpv3-step-no">3</span> Chạy phân tích</div>
+    <div class="lpv3-card-sub">Có thể mất từ vài giây (manual import) đến vài phút (thu thập thật qua Apify + phân loại AI).</div>
+    <div class="lpv3-card-body">
+      <button type="button" class="lpv3-btn lpv3-btn-primary" id="lpv3-run-btn">Chạy Benchmark</button>
+      <button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm lpv3-hidden" id="lpv3-cancel-run-btn" style="margin-left:8px">Huỷ chờ</button>
+      <span id="lpv3-run-elapsed" class="lpv3-field-hint" style="margin-left:8px"></span>
+      <div id="lpv3-run-alert"></div>
+      <div id="lpv3-job-list" class="lpv3-job-list"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Report -->
+  <div class="lpv3-card lpv3-hidden" id="lpv3-step-report">
+    <div class="lpv3-card-title"><span class="lpv3-step-no">4</span> Report Benchmark</div>
+    <div class="lpv3-card-body">
+      <div class="lpv3-report-toolbar">
+        <div class="lpv3-field" style="max-width:280px;flex:1"><label>Lịch sử report</label>
+          <select class="lpv3-select" id="lpv3-report-history-select"></select>
+        </div>
+        <button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm" id="lpv3-refresh-report-btn">Làm mới</button>
+      </div>
+      <div id="lpv3-report-alert"></div>
+      <div id="lpv3-report-root"></div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--lpv3-gray-400)">© LinkPower · Social Competitor Benchmark (Ver 3)</div>
+
+</div>
+<!-- /#lpv3-root -->
+
+<script>
+(function () {
+  "use strict";
+
+  /* ======================================================================
+     0. GUARD - chi khoi tao 1 lan (an toan neu block bi dan/chay >1 lan)
+     ====================================================================== */
+  var root = document.getElementById("lpv3-root");
+  if (!root || root.getAttribute("data-lpv3-mounted") === "1") { return; }
+  root.setAttribute("data-lpv3-mounted", "1");
+
+  /* ======================================================================
+     1. CONFIG
+     ====================================================================== */
+  var DEFAULT_API_BASE = "https://competitor-intelligence-center-api.onrender.com";
+  var LS_KEY_API_BASE = "lpv3_api_base";       // KHONG phai secret - chi la 1 URL
+  var LS_KEY_PROJECT_ID = "lpv3_last_project_id"; // KHONG phai secret
+
+  var TIMEOUT_DEFAULT_MS = 20000;
+  var TIMEOUT_IMPORT_MS = 30000;
+  var TIMEOUT_RUN_MS = 280000; // /run, /retry co the mat vai phut (Apify + AI that)
+  var POLL_INTERVAL_MS = 3000;
+  var POLL_MAX_ITERATIONS = 200; // gioi han cung (~10 phut) - tu dong dung du /run con dang cho
+
+  var PLATFORM_LABELS = { facebook: "Facebook", linkedin: "LinkedIn", tiktok: "TikTok", youtube: "YouTube" };
+  var JOB_STATUS_LABELS = {
+    pending: { text: "Đang chờ", tone: "gray" },
+    collecting: { text: "Đang thu thập", tone: "blue" },
+    collected: { text: "Đã thu thập", tone: "green" },
+    partially_collected: { text: "Một phần", tone: "orange" },
+    failed: { text: "Thất bại", tone: "red" },
+    requires_manual_input: { text: "Cần nhập thủ công", tone: "orange" }
+  };
+  // Sprint V3.3.4 (de bai muc 2.2) - trang thai TONG cua report/project do
+  // BACKEND tra ve qua full_report.status (xem v3/services/report_service.py),
+  // KHONG con tu suy tu data_coverage.channels_with_issues nua. `fallbackIssueCount`
+  // CHI dung khi report cu (sinh truoc Sprint V3.3.4) chua co field `status`.
+  var PROJECT_STATUS_LABELS = {
+    pending: { text: "Chờ chạy", tone: "gray" },
+    running: { text: "Đang chạy", tone: "blue" },
+    completed: { text: "Hoàn tất đầy đủ", tone: "green" },
+    partially_completed: { text: "Hoàn tất một phần dữ liệu", tone: "orange" },
+    failed: { text: "Thất bại", tone: "red" },
+    manual_import_required: { text: "Cần nhập thủ công", tone: "orange" }
+  };
+  function statusBadgeMeta(status, fallbackIssueCount) {
+    if (status && PROJECT_STATUS_LABELS[status]) return PROJECT_STATUS_LABELS[status];
+    return fallbackIssueCount > 0
+      ? { text: "Hoàn tất một phần dữ liệu", tone: "orange" }
+      : { text: "Hoàn tất đầy đủ", tone: "green" };
+  }
+
+  function safeLocalStorageGet(key) {
+    try { return window.localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function safeLocalStorageSet(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (e) { /* private mode / disabled - bo qua, khong crash */ }
+  }
+
+  /* ======================================================================
+     2. STATE
+     ====================================================================== */
+  var state = {
+    apiBase: (safeLocalStorageGet(LS_KEY_API_BASE) || DEFAULT_API_BASE).replace(/\/+$/, ""),
+    project: null,
+    brands: [],          // [{...brand, channels:[...]}]
+    jobs: [],             // ket qua lan /run hoac /retry gan nhat
+    reportHistory: [],
+    currentReport: null,
+    polling: { timer: null, count: 0, active: false },
+    runInFlightController: null,
+    rateLimitCooldownUntil: {}
+  };
+
+  /* ======================================================================
+     3. DOM helpers
+     ====================================================================== */
+  function $(sel) { return root.querySelector(sel); }
+  function $all(sel) { return Array.prototype.slice.call(root.querySelectorAll(sel)); }
+  function show(el) { if (el) el.classList.remove("lpv3-hidden"); }
+  function hide(el) { if (el) el.classList.add("lpv3-hidden"); }
+
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str === null || str === undefined ? "" : String(str);
+    return div.innerHTML;
+  }
+  function escapeAttr(str) { return escapeHtml(str).replace(/"/g, "&quot;"); }
+  function safeArray(v) { return Array.isArray(v) ? v : []; }
+  function isNum(v) { return typeof v === "number" && isFinite(v); }
+  function fmtNum(v) { return isNum(v) ? v.toLocaleString("vi-VN") : "—"; }
+  function fmtPct(v) { return isNum(v) ? v.toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "%" : "—"; }
+  function fmtScore(v) { return isNum(v) ? v.toLocaleString("vi-VN", { maximumFractionDigits: 1 }) : "Không đủ dữ liệu"; }
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  function el(tag, attrs, html) {
+    var e = document.createElement(tag);
+    if (attrs) { for (var k in attrs) { if (Object.prototype.hasOwnProperty.call(attrs, k)) e.setAttribute(k, attrs[k]); } }
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+
+  function alertHtml(kind, message, dismissible) {
+    var cls = { error: "lpv3-alert-error", warn: "lpv3-alert-warn", info: "lpv3-alert-info", ok: "lpv3-alert-ok" }[kind] || "lpv3-alert-info";
+    return (
+      '<div class="lpv3-alert ' + cls + '"><span>' + escapeHtml(message) + "</span>" +
+      (dismissible ? '<span class="lpv3-alert-close" data-lpv3-dismiss="1">&times;</span>' : "") +
+      "</div>"
+    );
+  }
+  function setAlert(container, kind, message) {
+    if (!container) return;
+    if (!message) { container.innerHTML = ""; return; }
+    container.innerHTML = alertHtml(kind, message, true);
+  }
+  function clearAlert(container) { if (container) container.innerHTML = ""; }
+
+  root.addEventListener("click", function (ev) {
+    var closeBtn = ev.target.closest && ev.target.closest("[data-lpv3-dismiss]");
+    if (closeBtn) {
+      var wrap = closeBtn.closest(".lpv3-alert");
+      if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    }
+  });
+
+  function topBanner(kind, message) {
+    var c = $("#lpv3-top-banner");
+    if (!message) { c.innerHTML = ""; return; }
+    c.innerHTML = alertHtml(kind, message, true);
+  }
+
+  /* ======================================================================
+     4. API CLIENT - CHI goi Backend (state.apiBase) - KHONG bao gio goi
+     Apify/OpenAI hay bat ky domain nao khac truc tiep tu trinh duyet (de
+     bai muc 3/4). Moi loi duoc chuan hoa thanh { kind, message, status }.
+     ====================================================================== */
+  function apiUrl(path) { return state.apiBase.replace(/\/+$/, "") + path; }
+
+  function parseErrorDetail(data) {
+    if (!data) return null;
+    // Dang thuan V3 (v3/errors.py qua main.py exception handler):
+    // { "error": "ClassName", "detail": "..." }
+    if (typeof data.detail === "string" && data.detail) return data.detail;
+    // Dang mac dinh FastAPI/Pydantic khi loi validate request (422) truoc
+    // khi toi duoc route: { "detail": [ { "msg": "...", "loc": [...] }, ... ] }
+    if (Array.isArray(data.detail)) {
+      return data.detail
+        .map(function (d) { return (d && (d.msg || d.message)) || JSON.stringify(d); })
+        .join("; ");
+    }
+    return null;
+  }
+
+  function apiFetch(path, options, timeoutMs) {
+    options = options || {};
+    var timeout = timeoutMs || TIMEOUT_DEFAULT_MS;
+    var controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    var timer = null;
+    var fetchOpts = {};
+    for (var k in options) { if (Object.prototype.hasOwnProperty.call(options, k)) fetchOpts[k] = options[k]; }
+    if (controller) fetchOpts.signal = controller.signal;
+
+    if (timer) clearTimeout(timer);
+    if (controller) timer = setTimeout(function () { controller.abort(); }, timeout);
+
+    return fetch(apiUrl(path), fetchOpts)
+      .then(function (res) {
+        clearTimeout(timer);
+        return res.text().then(function (text) {
+          var data = null;
+          try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+          if (!res.ok) {
+            var kind = "http";
+            if (res.status === 429) kind = "rate_limited";
+            else if (res.status === 404) kind = "not_found";
+            else if (res.status === 409) kind = "conflict";
+            else if (res.status >= 500) kind = "server";
+            var msg = parseErrorDetail(data) || ("Lỗi API (HTTP " + res.status + ").");
+            var err = new Error(msg);
+            err.kind = kind;
+            err.status = res.status;
+            err.errorCode = data && data.error;
+            err.body = data;
+            throw err;
+          }
+          return data;
+        });
+      })
+      .catch(function (err) {
+        clearTimeout(timer);
+        if (err && err.kind) throw err; // da phan loai o tren, forward nguyen
+        var wrapped;
+        if (err && err.name === "AbortError") {
+          wrapped = new Error("Quá thời gian chờ phản hồi từ Backend API (>" + Math.round(timeout / 1000) + "s).");
+          wrapped.kind = "timeout";
+        } else {
+          wrapped = new Error("Không thể kết nối tới Backend API — kiểm tra lại Backend URL ở khối Cấu hình phía trên, hoặc Backend đang offline.");
+          wrapped.kind = "offline";
+        }
+        throw wrapped;
+      });
+  }
+
+  function apiJson(path, method, body, timeoutMs, extraHeaders) {
+    var headers = { "Content-Type": "application/json" };
+    if (extraHeaders) {
+      for (var k in extraHeaders) { if (Object.prototype.hasOwnProperty.call(extraHeaders, k)) headers[k] = extraHeaders[k]; }
+    }
+    return apiFetch(
+      path,
+      { method: method, headers: headers, body: body !== undefined ? JSON.stringify(body) : undefined },
+      timeoutMs
+    );
+  }
+
+  // Sprint V3.3.4 (de bai muc 2.3/7) - moi POST "quan trong" (tao project,
+  // chay benchmark, retry job, import du lieu) gui 1 Idempotency-Key MOI
+  // MOI LAN NGUOI DUNG BAM NUT (khong tai su dung giua cac lan bam khac
+  // nhau) de backend chan tao trung neu request bi gui lai (double-click,
+  // retry mang) - xem v3/services/idempotency_service.py. KHONG tu dong
+  // retry POST o tang frontend khi chua co idempotency protection cho
+  // endpoint do (de bai: "Không tự retry POST khi chưa có idempotency
+  // protection") - toan bo POST trong file nay CHI chay lai khi NGUOI DUNG
+  // tu bam nut lan nua, khong co logic auto-retry ngam.
+  function newIdempotencyKey() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+    return "idem-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+  }
+  function idempotencyHeaders() { return { "Idempotency-Key": newIdempotencyKey() }; }
+
+  function friendlyErrorMessage(err) {
+    if (!err) return "Có lỗi không xác định xảy ra.";
+    if (err.kind === "rate_limited") return "Thao tác quá nhanh (rate limit) — " + err.message;
+    if (err.kind === "timeout") return err.message;
+    if (err.kind === "offline") return err.message;
+    if (err.kind === "conflict") return "Dự án đang có 1 lượt chạy khác chưa hoàn tất — vui lòng đợi rồi thử lại. (" + err.message + ")";
+    if (err.kind === "not_found") return err.message;
+    return err.message || "Có lỗi không xác định xảy ra.";
+  }
+
+  /* ======================================================================
+     5. CONFIG PANEL (khoi cau hinh DUY NHAT)
+     ====================================================================== */
+  function initConfigPanel() {
+    var input = $("#lpv3-api-base-input");
+    input.value = state.apiBase;
+    input.addEventListener("change", function () {
+      var v = (input.value || "").trim().replace(/\/+$/, "");
+      if (!v) { v = DEFAULT_API_BASE; }
+      state.apiBase = v;
+      input.value = v;
+      safeLocalStorageSet(LS_KEY_API_BASE, v);
+      setConnStatus("unknown", "Chưa kiểm tra");
+    });
+    $("#lpv3-check-conn-btn").addEventListener("click", checkConnection);
+    checkConnection();
+  }
+
+  function setConnStatus(kind, text) {
+    var dot = $("#lpv3-conn-dot");
+    dot.classList.remove("lpv3-ok", "lpv3-err");
+    if (kind === "ok") dot.classList.add("lpv3-ok");
+    else if (kind === "err") dot.classList.add("lpv3-err");
+    $("#lpv3-conn-text").textContent = text;
+  }
+
+  function checkConnection() {
+    setConnStatus("unknown", "Đang kiểm tra...");
+    apiFetch("/api/v3/health", {}, 10000)
+      .then(function () {
+        setConnStatus("ok", "Kết nối OK");
+        topBanner(null, null);
+      })
+      .catch(function (err) {
+        setConnStatus("err", "Không kết nối được");
+        var prefix = err && err.kind === "rate_limited" ? "" : "API offline hoặc URL Backend sai — ";
+        topBanner("error", prefix + friendlyErrorMessage(err));
+      });
+  }
+
+  /* ======================================================================
+     6. STEP 1 - PROJECT
+     ====================================================================== */
+  function initProjectStep() {
+    $("#lpv3-create-project-btn").addEventListener("click", createProject);
+    $("#lpv3-new-project-btn").addEventListener("click", resetToNewProject);
+
+    var lastId = safeLocalStorageGet(LS_KEY_PROJECT_ID);
+    if (lastId) {
+      apiFetch("/api/v3/benchmark/projects/" + encodeURIComponent(lastId), {}, TIMEOUT_DEFAULT_MS)
+        .then(function (project) { onProjectReady(project); })
+        .catch(function () { safeLocalStorageSet(LS_KEY_PROJECT_ID, ""); });
+    }
+  }
+
+  function createProject() {
+    var name = ($("#lpv3-project-name").value || "").trim();
+    var alertBox = $("#lpv3-project-alert");
+    clearAlert(alertBox);
+    if (!name) { setAlert(alertBox, "error", "Vui lòng nhập tên dự án."); return; }
+
+    var payload = {
+      name: name,
+      objective: ($("#lpv3-project-objective").value || "").trim() || null,
+      date_range_days: parseInt($("#lpv3-project-range").value, 10) || 90,
+      content_limit: parseInt($("#lpv3-project-limit").value, 10) || 30
+    };
+
+    var btn = $("#lpv3-create-project-btn");
+    btn.disabled = true;
+    apiJson("/api/v3/benchmark/projects", "POST", payload, undefined, idempotencyHeaders())
+      .then(function (project) { onProjectReady(project); })
+      .catch(function (err) { setAlert(alertBox, "error", friendlyErrorMessage(err)); })
+      .then(function () { btn.disabled = false; });
+  }
+
+  function onProjectReady(project) {
+    state.project = project;
+    state.brands = safeArray(project.brands).map(function (b) { return Object.assign({}, b, { channels: safeArray(b.channels) }); });
+    safeLocalStorageSet(LS_KEY_PROJECT_ID, project.id);
+
+    $("#lpv3-project-name").disabled = true;
+    $("#lpv3-project-objective").disabled = true;
+    $("#lpv3-project-range").disabled = true;
+    $("#lpv3-project-limit").disabled = true;
+    $("#lpv3-project-name").value = project.name;
+    if (project.objective) $("#lpv3-project-objective").value = project.objective;
+    $("#lpv3-project-range").value = project.date_range_days;
+    $("#lpv3-project-limit").value = project.content_limit;
+    show($("#lpv3-new-project-btn"));
+    $("#lpv3-create-project-btn").classList.add("lpv3-hidden");
+
+    var info = $("#lpv3-project-info");
+    info.innerHTML =
+      '<div class="lpv3-badge lpv3-badge-blue">Dự án #' + escapeHtml(project.id.slice(0, 8)) + "</div> " +
+      '<span class="lpv3-field-hint">' + escapeHtml(project.name) + " · " + project.date_range_days + " ngày · tối đa " + project.content_limit + " bài/kênh</span>";
+    show(info);
+
+    show($("#lpv3-step-brands"));
+    show($("#lpv3-step-run"));
+    renderBrandList();
+    fetchReportHistory(true);
+  }
+
+  function resetToNewProject() {
+    state.project = null;
+    state.brands = [];
+    state.jobs = [];
+    state.currentReport = null;
+    state.reportHistory = [];
+    safeLocalStorageSet(LS_KEY_PROJECT_ID, "");
+    stopPolling();
+
+    ["lpv3-project-name", "lpv3-project-objective"].forEach(function (id) { $("#" + id).value = ""; $("#" + id).disabled = false; });
+    $("#lpv3-project-range").value = 90; $("#lpv3-project-range").disabled = false;
+    $("#lpv3-project-limit").value = 30; $("#lpv3-project-limit").disabled = false;
+    $("#lpv3-create-project-btn").classList.remove("lpv3-hidden");
+    hide($("#lpv3-new-project-btn"));
+    hide($("#lpv3-project-info"));
+    clearAlert($("#lpv3-project-alert"));
+
+    hide($("#lpv3-step-brands"));
+    hide($("#lpv3-step-run"));
+    hide($("#lpv3-step-report"));
+    $("#lpv3-brand-list").innerHTML = "";
+    $("#lpv3-job-list").innerHTML = "";
+    $("#lpv3-report-root").innerHTML = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /* ======================================================================
+     7. STEP 2 - BRANDS & CHANNELS
+     ====================================================================== */
+  function initBrandStep() {
+    $("#lpv3-add-brand-btn").addEventListener("click", addBrand);
+    $("#lpv3-goto-run-btn").addEventListener("click", function () {
+      $("#lpv3-step-run").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function addBrand() {
+    var alertBox = $("#lpv3-brand-alert");
+    clearAlert(alertBox);
+    var name = ($("#lpv3-brand-name").value || "").trim();
+    var brandType = $("#lpv3-brand-type").value;
+    if (!name) { setAlert(alertBox, "error", "Vui lòng nhập tên thương hiệu."); return; }
+    if (!state.project) { setAlert(alertBox, "error", "Chưa có dự án — hãy tạo dự án ở Bước 1 trước."); return; }
+
+    var btn = $("#lpv3-add-brand-btn");
+    btn.disabled = true;
+    apiJson("/api/v3/benchmark/projects/" + state.project.id + "/brands", "POST", { name: name, brand_type: brandType })
+      .then(function (brand) {
+        state.brands.push(Object.assign({}, brand, { channels: [] }));
+        $("#lpv3-brand-name").value = "";
+        renderBrandList();
+      })
+      .catch(function (err) { setAlert(alertBox, "error", friendlyErrorMessage(err)); })
+      .then(function () { btn.disabled = false; });
+  }
+
+  function detectPlatformHint(url) {
+    var u = (url || "").toLowerCase();
+    if (/facebook\.com|fb\.com|fb\.watch/.test(u)) return "facebook";
+    if (/linkedin\.com/.test(u)) return "linkedin";
+    if (/tiktok\.com/.test(u)) return "tiktok";
+    if (/youtube\.com|youtu\.be/.test(u)) return "youtube";
+    return null;
+  }
+
+  function renderBrandList() {
+    var container = $("#lpv3-brand-list");
+    if (!state.brands.length) {
+      container.innerHTML = '<p class="lpv3-empty" style="margin-top:10px">Chưa có thương hiệu nào — thêm LinkPower trước, sau đó thêm 1 hoặc nhiều đối thủ.</p>';
+      return;
+    }
+    container.innerHTML = state.brands
+      .map(function (brand) {
+        var typeBadge = brand.brand_type === "linkpower"
+          ? '<span class="lpv3-badge lpv3-badge-blue">LinkPower</span>'
+          : '<span class="lpv3-badge lpv3-badge-gray">Đối thủ</span>';
+        var channelsHtml = safeArray(brand.channels).length
+          ? '<div class="lpv3-channel-list">' + brand.channels.map(channelItemHtml).join("") + "</div>"
+          : '<p class="lpv3-empty" style="margin-top:6px">Chưa có kênh nào.</p>';
+        return (
+          '<div class="lpv3-brand-block" data-brand-id="' + escapeAttr(brand.id) + '">' +
+          '<div class="lpv3-brand-block-head"><span class="lpv3-brand-name">' + escapeHtml(brand.name) + "</span>" + typeBadge + "</div>" +
+          '<div class="lpv3-channel-add-row">' +
+          '<input class="lpv3-input lpv3-channel-url-input" type="text" placeholder="Dán URL Facebook/LinkedIn/TikTok..." data-brand-id="' + escapeAttr(brand.id) + '">' +
+          '<button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm lpv3-add-channel-btn" data-brand-id="' + escapeAttr(brand.id) + '">+ Thêm kênh</button>' +
+          "</div>" +
+          '<div class="lpv3-channel-add-alert" data-brand-id="' + escapeAttr(brand.id) + '"></div>' +
+          channelsHtml +
+          "</div>"
+        );
+      })
+      .join("");
+
+    $all(".lpv3-add-channel-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () { addChannel(btn.getAttribute("data-brand-id")); });
+    });
+    $all(".lpv3-channel-url-input").forEach(function (input) {
+      input.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") addChannel(input.getAttribute("data-brand-id"));
+      });
+    });
+  }
+
+  function channelItemHtml(channel) {
+    var label = PLATFORM_LABELS[channel.platform] || channel.platform || "?";
+    return (
+      '<div class="lpv3-channel-item">' +
+      '<span class="lpv3-badge lpv3-badge-blue">' + escapeHtml(label) + "</span>" +
+      '<span class="lpv3-channel-url">' + escapeHtml(channel.normalized_url || channel.source_url || "") + "</span>" +
+      "</div>"
+    );
+  }
+
+  function addChannel(brandId) {
+    var input = root.querySelector('.lpv3-channel-url-input[data-brand-id="' + brandId + '"]');
+    var alertBox = root.querySelector('.lpv3-channel-add-alert[data-brand-id="' + brandId + '"]');
+    clearAlert(alertBox);
+    var url = (input.value || "").trim();
+    if (!url) { setAlert(alertBox, "error", "Vui lòng dán URL kênh."); return; }
+
+    var hint = detectPlatformHint(url);
+    if (!hint) {
+      setAlert(alertBox, "warn", "Không nhận diện được nền tảng từ URL này (chỉ hỗ trợ Facebook/LinkedIn/TikTok) — vẫn gửi lên Backend để kiểm tra lại.");
+    }
+
+    var btn = root.querySelector('.lpv3-add-channel-btn[data-brand-id="' + brandId + '"]');
+    btn.disabled = true;
+    apiJson("/api/v3/benchmark/projects/" + state.project.id + "/channels", "POST", { brand_id: brandId, url: url })
+      .then(function (channel) {
+        var brand = state.brands.filter(function (b) { return b.id === brandId; })[0];
+        if (brand) brand.channels.push(channel);
+        input.value = "";
+        renderBrandList();
+      })
+      .catch(function (err) {
+        // de bai muc 14 "Xu ly URL sai" - hien loi ngay canh o nhap tuong ung
+        setAlert(alertBox, "error", friendlyErrorMessage(err));
+      })
+      .then(function () { if (btn) btn.disabled = false; });
+  }
+
+  /* ======================================================================
+     8. STEP 3 - RUN + progress tung channel (polling GET /jobs song song
+     voi request /run dang cho, gioi han va tu dung - de bai muc 16)
+     ====================================================================== */
+  function initRunStep() {
+    $("#lpv3-run-btn").addEventListener("click", runBenchmark);
+    $("#lpv3-cancel-run-btn").addEventListener("click", cancelRun);
+  }
+
+  function allChannels() {
+    var out = [];
+    state.brands.forEach(function (b) { safeArray(b.channels).forEach(function (c) { out.push(Object.assign({}, c, { brand_name: b.name, brand_type: b.brand_type })); }); });
+    return out;
+  }
+
+  function stopPolling() {
+    state.polling.active = false;
+    if (state.polling.timer) { clearTimeout(state.polling.timer); state.polling.timer = null; }
+  }
+
+  function startJobPolling() {
+    state.polling.active = true;
+    state.polling.count = 0;
+    function tick() {
+      if (!state.polling.active) return;
+      state.polling.count += 1;
+      if (state.polling.count > POLL_MAX_ITERATIONS) { stopPolling(); return; } // gioi han cung - tu dung
+      apiFetch("/api/v3/benchmark/projects/" + state.project.id + "/jobs", {}, 10000)
+        .then(function (data) {
+          if (!state.polling.active) return;
+          state.jobs = mergeLatestJobsByChannel(safeArray(data && data.items));
+          renderJobList(true);
+          state.polling.timer = setTimeout(tick, POLL_INTERVAL_MS);
+        })
+        .catch(function () {
+          // loi mang tam thoi trong luc poll - khong dung han, thu lai o vong sau
+          // (van tinh vao POLL_MAX_ITERATIONS nen khong bao gio vo han).
+          if (state.polling.active) state.polling.timer = setTimeout(tick, POLL_INTERVAL_MS);
+        });
+    }
+    state.polling.timer = setTimeout(tick, POLL_INTERVAL_MS);
+  }
+
+  function mergeLatestJobsByChannel(jobs) {
+    var byChannel = {};
+    jobs.forEach(function (j) {
+      var prev = byChannel[j.channel_id];
+      if (!prev || new Date(j.started_at || 0) >= new Date(prev.started_at || 0)) byChannel[j.channel_id] = j;
+    });
+    var out = [];
+    for (var k in byChannel) { if (Object.prototype.hasOwnProperty.call(byChannel, k)) out.push(byChannel[k]); }
+    return out;
+  }
+
+  var runElapsedTimer = null;
+  function startElapsedCounter() {
+    var startedAt = Date.now();
+    var elEl = $("#lpv3-run-elapsed");
+    elEl.textContent = "Đã chạy 0s";
+    runElapsedTimer = setInterval(function () {
+      elEl.textContent = "Đã chạy " + Math.round((Date.now() - startedAt) / 1000) + "s";
+    }, 1000);
+  }
+  function stopElapsedCounter() {
+    if (runElapsedTimer) { clearInterval(runElapsedTimer); runElapsedTimer = null; }
+    $("#lpv3-run-elapsed").textContent = "";
+  }
+
+  function runBenchmark() {
+    var alertBox = $("#lpv3-run-alert");
+    clearAlert(alertBox);
+    if (!state.project) { setAlert(alertBox, "error", "Chưa có dự án."); return; }
+    if (!allChannels().length) { setAlert(alertBox, "error", "Dự án chưa có kênh nào — quay lại Bước 2 để thêm kênh."); return; }
+
+    // hien "dang cho" cho toan bo channel NGAY (progress tung channel bat
+    // dau tu trang thai pending, du /run con dang chay o backend).
+    state.jobs = allChannels().map(function (c) {
+      return { channel_id: c.id, status: "pending", provider: null, posts_collected: null, error_reason: null, _channelRef: c };
+    });
+    renderJobList(true);
+
+    var btn = $("#lpv3-run-btn");
+    btn.disabled = true;
+    show($("#lpv3-cancel-run-btn"));
+    startElapsedCounter();
+    startJobPolling();
+
+    apiJson("/api/v3/benchmark/projects/" + state.project.id + "/run", "POST", undefined, TIMEOUT_RUN_MS, idempotencyHeaders())
+      .then(function (result) {
+        stopPolling();
+        state.jobs = mergeLatestJobsByChannel(safeArray(result.jobs));
+        renderJobList(false);
+        setAlert(alertBox, "ok", "Chạy xong — " + summarizeJobs(state.jobs));
+        show($("#lpv3-step-report"));
+        return fetchLatestReport();
+      })
+      .catch(function (err) {
+        stopPolling();
+        // du /run loi/timeout van lam moi lai trang thai tung channel 1 lan
+        // cuoi de nguoi dung thay duoc phan da xong truoc khi loi (khong mat
+        // progress da co).
+        apiFetch("/api/v3/benchmark/projects/" + state.project.id + "/jobs", {}, 8000)
+          .then(function (data) { state.jobs = mergeLatestJobsByChannel(safeArray(data && data.items)); renderJobList(false); })
+          .catch(function () { renderJobList(false); });
+        setAlert(alertBox, "error", friendlyErrorMessage(err));
+      })
+      .then(function () {
+        btn.disabled = false;
+        hide($("#lpv3-cancel-run-btn"));
+        stopElapsedCounter();
+        state.runInFlightController = null;
+      });
+  }
+
+  function cancelRun() {
+    // Khong the huy job dang chay o Backend (dong bo, khong co API huy) -
+    // chi dung cho phia trinh duyet KHONG cho vo han (de bai muc 12 "khong
+    // loading vo han") - request that o server van tiep tuc chay ngam, lan
+    // /jobs polling tiep theo/lan bam "Chay Benchmark" sau se thay ket qua that.
+    stopPolling();
+    stopElapsedCounter();
+    hide($("#lpv3-cancel-run-btn"));
+    $("#lpv3-run-btn").disabled = false;
+    setAlert($("#lpv3-run-alert"), "warn", "Đã dừng chờ ở trình duyệt — lượt chạy có thể vẫn đang tiếp tục ở máy chủ, bấm \"Làm mới\" ở Report hoặc chạy lại sau ít phút để xem kết quả mới nhất.");
+  }
+
+  function summarizeJobs(jobs) {
+    var ok = jobs.filter(function (j) { return j.status === "collected"; }).length;
+    var partial = jobs.filter(function (j) { return j.status === "partially_collected"; }).length;
+    var failed = jobs.filter(function (j) { return j.status === "failed"; }).length;
+    var manual = jobs.filter(function (j) { return j.status === "requires_manual_input"; }).length;
+    var parts = [];
+    if (ok) parts.push(ok + " kênh đầy đủ");
+    if (partial) parts.push(partial + " kênh một phần");
+    if (manual) parts.push(manual + " kênh cần nhập thủ công");
+    if (failed) parts.push(failed + " kênh thất bại");
+    return parts.length ? parts.join(", ") + "." : "chưa có dữ liệu.";
+  }
+
+  function channelLabelFor(channelId) {
+    var c = allChannels().filter(function (x) { return x.id === channelId; })[0];
+    if (!c) return channelId;
+    return c.brand_name + " · " + (PLATFORM_LABELS[c.platform] || c.platform);
+  }
+
+  function renderJobList(isLive) {
+    var container = $("#lpv3-job-list");
+    if (!state.jobs.length) { container.innerHTML = ""; return; }
+    container.innerHTML = state.jobs.map(function (job) { return jobRowHtml(job, isLive); }).join("");
+
+    $all(".lpv3-retry-btn").forEach(function (btn) { btn.addEventListener("click", function () { retryJob(btn.getAttribute("data-job-id"), btn.getAttribute("data-channel-id")); }); });
+    $all(".lpv3-manual-import-toggle").forEach(function (btn) { btn.addEventListener("click", function () { toggleImportPanel(btn.getAttribute("data-channel-id")); }); });
+    $all(".lpv3-import-preview-btn").forEach(function (btn) { btn.addEventListener("click", function () { onImportFileChosen(btn.getAttribute("data-channel-id")); }); });
+    $all(".lpv3-import-commit-btn").forEach(function (btn) { btn.addEventListener("click", function () { commitImport(btn.getAttribute("data-channel-id")); }); });
+  }
+
+  function jobRowHtml(job, isLive) {
+    var meta = JOB_STATUS_LABELS[job.status] || { text: job.status, tone: "gray" };
+    var spin = isLive && (job.status === "pending" || job.status === "collecting") ? '<span class="lpv3-progress-spin"></span> ' : "";
+    var channelId = job.channel_id;
+    var label = channelLabelFor(channelId);
+    var provider = job.provider ? '<span class="lpv3-badge lpv3-badge-gray">' + escapeHtml(job.provider) + "</span>" : "";
+    var postsInfo = job.posts_collected !== null && job.posts_collected !== undefined ? fmtNum(job.posts_collected) + " bài/video" : "";
+    var needsAction = job.status === "failed" || job.status === "requires_manual_input";
+
+    var html =
+      '<div class="lpv3-job-row" data-channel-id="' + escapeAttr(channelId) + '">' +
+      '<div class="lpv3-job-row-top">' + spin +
+      '<span class="lpv3-job-channel">' + escapeHtml(label) + "</span>" +
+      '<span class="lpv3-badge lpv3-badge-' + meta.tone + '">' + escapeHtml(meta.text) + "</span>" + provider +
+      "</div>" +
+      '<div class="lpv3-job-meta">' + escapeHtml(postsInfo) + "</div>";
+
+    if (job.error_reason) html += '<div class="lpv3-job-reason">' + escapeHtml(job.error_reason) + "</div>";
+
+    if (!isLive) {
+      html += '<div class="lpv3-job-actions">';
+      if (job.id) html += '<button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm lpv3-retry-btn" data-job-id="' + escapeAttr(job.id) + '" data-channel-id="' + escapeAttr(channelId) + '">Thử lại kênh này</button>';
+      if (needsAction) html += '<button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm lpv3-manual-import-toggle" data-channel-id="' + escapeAttr(channelId) + '">Nhập thủ công (CSV/JSON)</button>';
+      html += "</div>";
+      html += '<div class="lpv3-import-panel lpv3-hidden" id="lpv3-import-panel-' + escapeAttr(channelId) + '">' + importPanelInnerHtml(channelId) + "</div>";
+    }
+
+    html += "</div>";
+    return html;
+  }
+
+  function importPanelInnerHtml(channelId) {
+    return (
+      '<div class="lpv3-import-hint">Chỉ chấp nhận <code>.csv</code> hoặc <code>.json</code>, tối đa 2MB — cột bắt buộc: <code>external_content_id</code>, <code>text_content</code> (hoặc <code>title</code>). Xem thêm ở docs/ver3/V3_MANUAL_IMPORT_GUIDE.md.</div>' +
+      '<input type="file" class="lpv3-import-file-input" id="lpv3-import-file-' + escapeAttr(channelId) + '" accept=".csv,.json">' +
+      '<div style="margin-top:8px"><button type="button" class="lpv3-btn lpv3-btn-ghost lpv3-btn-sm lpv3-import-preview-btn" data-channel-id="' + escapeAttr(channelId) + '">Xem trước dữ liệu</button></div>' +
+      '<div class="lpv3-import-alert" id="lpv3-import-alert-' + escapeAttr(channelId) + '"></div>' +
+      '<div id="lpv3-import-preview-' + escapeAttr(channelId) + '"></div>'
+    );
+  }
+
+  function toggleImportPanel(channelId) {
+    var panel = $("#lpv3-import-panel-" + cssEscape(channelId));
+    if (!panel) return;
+    panel.classList.toggle("lpv3-hidden");
+  }
+
+  function cssEscape(s) { return String(s).replace(/[^a-zA-Z0-9_-]/g, "_"); }
+
+  function retryJob(jobId, channelId) {
+    var alertBox = $("#lpv3-run-alert");
+    clearAlert(alertBox);
+    var row = root.querySelector('.lpv3-job-row[data-channel-id="' + channelId + '"]');
+    var btn = row ? row.querySelector(".lpv3-retry-btn") : null;
+    if (btn) btn.disabled = true;
+
+    apiJson("/api/v3/benchmark/jobs/" + jobId + "/retry", "POST", undefined, TIMEOUT_RUN_MS, idempotencyHeaders())
+      .then(function (result) {
+        var updated = result.job;
+        state.jobs = state.jobs.map(function (j) { return j.channel_id === updated.channel_id ? updated : j; });
+        renderJobList(false);
+        setAlert(alertBox, "ok", "Đã chạy lại kênh — trạng thái mới: " + (JOB_STATUS_LABELS[updated.status] || {}).text);
+        return fetchLatestReport();
+      })
+      .catch(function (err) { setAlert(alertBox, "error", friendlyErrorMessage(err)); })
+      .then(function () { if (btn) btn.disabled = false; });
+  }
+
+  /* ---- Manual import: preview truoc, roi commit (de bai: "manual import CSV/JSON") ---- */
+  var pendingImportFiles = {}; // channelId -> File
+
+  function onImportFileChosen(channelId) {
+    var input = $("#lpv3-import-file-" + cssEscape(channelId));
+    var alertBox = $("#lpv3-import-alert-" + cssEscape(channelId));
+    var previewBox = $("#lpv3-import-preview-" + cssEscape(channelId));
+    clearAlert(alertBox);
+    previewBox.innerHTML = "";
+    var file = input.files && input.files[0];
+    if (!file) { setAlert(alertBox, "error", "Vui lòng chọn 1 file .csv hoặc .json."); return; }
+    if (!/\.(csv|json)$/i.test(file.name)) { setAlert(alertBox, "error", "Chỉ hỗ trợ file .csv hoặc .json."); return; }
+
+    pendingImportFiles[channelId] = file;
+    var form = new FormData();
+    form.append("file", file);
+
+    apiFetch("/api/v3/benchmark/import/preview", { method: "POST", body: form }, TIMEOUT_IMPORT_MS)
+      .then(function (result) {
+        previewBox.innerHTML = importPreviewHtml(result, channelId);
+        $all(".lpv3-import-commit-btn").forEach(function (btn) { btn.addEventListener("click", function () { commitImport(btn.getAttribute("data-channel-id")); }); });
+      })
+      .catch(function (err) { setAlert(alertBox, "error", friendlyErrorMessage(err)); });
+  }
+
+  function importPreviewHtml(result, channelId) {
+    var rows = safeArray(result.preview);
+    var head = rows.length ? Object.keys(rows[0]).slice(0, 5) : [];
+    var tableHtml = rows.length
+      ? '<div class="lpv3-table-wrap"><table class="lpv3-table"><thead><tr>' +
+        head.map(function (h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") +
+        "</tr></thead><tbody>" +
+        rows.slice(0, 10).map(function (r) { return "<tr>" + head.map(function (h) { return "<td>" + escapeHtml(truncate(r[h], 60)) + "</td>"; }).join("") + "</tr>"; }).join("") +
+        "</tbody></table></div>"
+      : '<p class="lpv3-empty">Không có dòng hợp lệ nào để xem trước.</p>';
+
+    var errCount = safeArray(result.errors).length;
+    return (
+      '<div class="lpv3-field-hint" style="margin-top:8px">' + result.total_rows + " dòng · " + result.valid_count + " hợp lệ · " + result.invalid_count + " lỗi</div>" +
+      tableHtml +
+      (errCount ? '<div class="lpv3-alert lpv3-alert-warn" style="margin-top:8px">' + errCount + " dòng lỗi (sẽ bị bỏ qua khi nhập), vd: dòng " + result.errors[0].row_number + " — " + escapeHtml((result.errors[0].errors || []).join("; ")) + "</div>" : "") +
+      '<div style="margin-top:10px"><button type="button" class="lpv3-btn lpv3-btn-primary lpv3-btn-sm lpv3-import-commit-btn" data-channel-id="' + escapeAttr(channelId) + '"' + (result.valid_count ? "" : " disabled") + ">Xác nhận nhập " + result.valid_count + " dòng</button></div>"
+    );
+  }
+
+  function truncate(v, n) { var s = v === null || v === undefined ? "" : String(v); return s.length > n ? s.slice(0, n) + "…" : s; }
+
+  function commitImport(channelId) {
+    var file = pendingImportFiles[channelId];
+    var alertBox = $("#lpv3-import-alert-" + cssEscape(channelId));
+    if (!file) { setAlert(alertBox, "error", "Vui lòng chọn lại file (phiên xem trước đã hết hạn)."); return; }
+
+    var form = new FormData();
+    form.append("channel_id", channelId);
+    form.append("file", file);
+
+    apiFetch("/api/v3/benchmark/import", { method: "POST", headers: idempotencyHeaders(), body: form }, TIMEOUT_IMPORT_MS)
+      .then(function (result) {
+        setAlert(alertBox, "ok", "Đã nhập " + result.imported_count + "/" + result.total_rows + " dòng. Bấm \"Thử lại kênh này\" ở trên để tính lại benchmark với dữ liệu vừa nhập.");
+        delete pendingImportFiles[channelId];
+      })
+      .catch(function (err) { setAlert(alertBox, "error", friendlyErrorMessage(err)); });
+  }
+
+  /* ======================================================================
+     9. STEP 4 - REPORT A-J + lich su report
+     ====================================================================== */
+  function initReportStep() {
+    $("#lpv3-refresh-report-btn").addEventListener("click", function () { fetchLatestReport(); fetchReportHistory(false); });
+    $("#lpv3-report-history-select").addEventListener("change", function (ev) {
+      var id = ev.target.value;
+      if (!id) return;
+      apiFetch("/api/v3/benchmark/reports/" + id, {}, TIMEOUT_DEFAULT_MS)
+        .then(function (report) { state.currentReport = report; renderReport(report); })
+        .catch(function (err) { setAlert($("#lpv3-report-alert"), "error", friendlyErrorMessage(err)); });
+    });
+  }
+
+  function fetchLatestReport() {
+    return apiFetch("/api/v3/benchmark/projects/" + state.project.id + "/report", {}, TIMEOUT_DEFAULT_MS)
+      .then(function (report) {
+        state.currentReport = report;
+        renderReport(report);
+        show($("#lpv3-step-report"));
+        return fetchReportHistory(false);
+      })
+      .catch(function (err) {
+        if (err.kind === "not_found") { setAlert($("#lpv3-report-alert"), "info", "Dự án chưa có report — chạy Benchmark ở Bước 3 trước."); return; }
+        setAlert($("#lpv3-report-alert"), "error", friendlyErrorMessage(err));
+      });
+  }
+
+  function fetchReportHistory(silent) {
+    if (!state.project) return Promise.resolve();
+    return apiFetch("/api/v3/benchmark/projects/" + state.project.id + "/reports", {}, TIMEOUT_DEFAULT_MS)
+      .then(function (data) {
+        state.reportHistory = safeArray(data && data.items);
+        renderReportHistorySelect();
+      })
+      .catch(function (err) { if (!silent) setAlert($("#lpv3-report-alert"), "error", friendlyErrorMessage(err)); });
+  }
+
+  function renderReportHistorySelect() {
+    var select = $("#lpv3-report-history-select");
+    if (!state.reportHistory.length) { select.innerHTML = '<option value="">Chưa có report</option>'; return; }
+    select.innerHTML = state.reportHistory
+      .slice()
+      .sort(function (a, b) { return (b.version || 0) - (a.version || 0); })
+      .map(function (r) { return '<option value="' + escapeAttr(r.id) + '">Phiên bản ' + r.version + " — " + escapeHtml(fmtDate(r.generated_at)) + "</option>"; })
+      .join("");
+    if (state.currentReport) select.value = state.currentReport.id;
+  }
+
+  function reportCard(title, tag, bodyHtml, span2) {
+    return (
+      '<div class="lpv3-card' + (span2 ? " lpv3-span-2" : "") + '">' +
+      '<div class="lpv3-report-section-title"><span class="lpv3-tag">' + escapeHtml(tag) + "</span>" + escapeHtml(title) + "</div>" +
+      "<div>" + bodyHtml + "</div>" +
+      "</div>"
+    );
+  }
+
+  function renderReport(reportEnvelope) {
+    var alertBox = $("#lpv3-report-alert");
+    clearAlert(alertBox);
+    var full = reportEnvelope && reportEnvelope.full_report;
+    if (!full) { $("#lpv3-report-root").innerHTML = '<p class="lpv3-empty">Chưa có dữ liệu report.</p>'; return; }
+
+    var coverageIssues = safeArray(full.data_coverage && full.data_coverage.channels_with_issues);
+
+    var html = "";
+    html += '<div class="lpv3-field-hint" style="margin-bottom:10px">Report phiên bản ' + (reportEnvelope.version || "?") + " · sinh lúc " + fmtDate(full.generated_at) +
+      ' · <span class="lpv3-badge lpv3-badge-' + statusBadgeMeta(full.status, coverageIssues.length).tone + '">' + escapeHtml(statusBadgeMeta(full.status, coverageIssues.length).text) + "</span>" +
+      "</div>";
+
+    html += '<div class="lpv3-report-grid">';
+    html += reportCard("Executive Summary", "A", sectionExecutiveSummary(full.executive_summary), true);
+    html += reportCard("Data Coverage", "B", sectionDataCoverage(full.data_coverage), true);
+    html += reportCard("Brand Ranking", "C", sectionBrandRanking(full.brand_ranking), true);
+    html += reportCard("Platform Benchmark", "D", sectionPlatformBenchmark(full.platform_benchmark), true);
+    html += reportCard("Content Pillar Analysis", "E", sectionShareBreakdown(full.content_pillar_analysis));
+    html += reportCard("Format Analysis", "F", sectionShareBreakdown(full.format_analysis));
+    html += reportCard("Top Content", "G", sectionTopContent(full.top_content), true);
+    html += reportCard("Messaging Analysis", "H", sectionMessaging(full.messaging_analysis), true);
+    html += reportCard("Competitive Gap", "I", sectionCompetitiveGap(full.competitive_gap), true);
+    html += reportCard("Recommendations", "J", sectionRecommendations(full.recommendations), true);
+    html += "</div>";
+
+    $("#lpv3-report-root").innerHTML = html;
+  }
+
+  var NO_DATA = "Không đủ dữ liệu";
+
+  function sectionExecutiveSummary(a) {
+    if (!a) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    var actions = safeArray(a.top_3_actions);
+    return (
+      '<ul class="lpv3-kv-list">' +
+      "<li><b>Tổng quan LinkPower</b>" + escapeHtml(a.linkpower_overview || NO_DATA) + "</li>" +
+      "<li><b>Đối thủ mạnh nhất</b>" + escapeHtml(a.strongest_competitor || NO_DATA) + "</li>" +
+      "<li><b>Nền tảng mạnh nhất</b>" + escapeHtml(a.strongest_platform || NO_DATA) + "</li>" +
+      "<li><b>Khoảng trống lớn nhất</b>" + escapeHtml(a.biggest_gap || NO_DATA) + "</li>" +
+      "</ul>" +
+      (actions.length ? '<div style="margin-top:10px"><b style="font-size:12px">3 hành động ưu tiên:</b><ul style="margin-top:6px">' + actions.map(function (t) { return "<li style='padding:3px 0;font-size:12.5px'>• " + escapeHtml(t) + "</li>"; }).join("") + "</ul></div>" : "")
+    );
+  }
+
+  function sectionDataCoverage(b) {
+    if (!b) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    var byChannel = b.content_item_count_by_channel || {};
+    var rows = Object.keys(byChannel).map(function (k) { return "<tr><td>" + escapeHtml(k) + "</td><td>" + fmtNum(byChannel[k]) + "</td></tr>"; }).join("");
+    var issues = safeArray(b.channels_with_issues);
+    return (
+      '<ul class="lpv3-kv-list">' +
+      "<li><b>Số thương hiệu</b>" + fmtNum(b.brand_count) + "</li>" +
+      "<li><b>Số kênh</b>" + fmtNum(b.channel_count) + "</li>" +
+      "<li><b>Tổng nội dung</b>" + fmtNum(b.content_item_count) + "</li>" +
+      "<li><b>Khoảng thời gian</b>" + fmtNum(b.date_range_days) + " ngày</li>" +
+      "<li><b>Provider đã dùng</b>" + escapeHtml(safeArray(b.providers_used).join(", ") || NO_DATA) + "</li>" +
+      "</ul>" +
+      (rows ? '<div class="lpv3-table-wrap" style="margin-top:10px"><table class="lpv3-table"><thead><tr><th>Kênh</th><th>Số nội dung</th></tr></thead><tbody>' + rows + "</tbody></table></div>" : "") +
+      (issues.length
+        ? '<div style="margin-top:10px"><b style="font-size:12px">Kênh có vấn đề:</b>' +
+          issues.map(function (i) { return '<div class="lpv3-alert lpv3-alert-warn" style="margin-top:6px">' + escapeHtml(i.channel) + " — " + escapeHtml((JOB_STATUS_LABELS[i.status] || {}).text || i.status) + (i.reason ? ": " + escapeHtml(i.reason) : "") + "</div>"; }).join("")
+          + "</div>"
+        : "")
+    );
+  }
+
+  function sectionBrandRanking(rows) {
+    rows = safeArray(rows);
+    if (!rows.length) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    var head = ["Thương hiệu", "Nền tảng", "Activity", "Engagement", "Content", "Conversion", "Overall", "Độ tin cậy"];
+    var body = rows
+      .map(function (r) {
+        return (
+          "<tr><td>" + escapeHtml(r.brand) + (r.brand_type === "linkpower" ? ' <span class="lpv3-badge lpv3-badge-blue">LP</span>' : "") + "</td>" +
+          "<td>" + escapeHtml(PLATFORM_LABELS[r.platform] || r.platform) + "</td>" +
+          "<td>" + fmtScore(r.activity_score) + "</td>" +
+          "<td>" + fmtScore(r.engagement_score) + "</td>" +
+          "<td>" + fmtScore(r.content_score) + "</td>" +
+          "<td>" + fmtScore(r.conversion_score) + "</td>" +
+          "<td><b>" + fmtScore(r.overall_score) + "</b></td>" +
+          "<td>" + escapeHtml(confidenceLabel(r.confidence)) + "</td></tr>"
+        );
+      })
+      .join("");
+    return '<div class="lpv3-table-wrap"><table class="lpv3-table"><thead><tr>' + head.map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr></thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  function confidenceLabel(c) {
+    return { high: "Cao", partial: "Một phần", low: "Thấp", no_data: NO_DATA }[c] || c || NO_DATA;
+  }
+  function statusLabel(s) {
+    return { linkpower_stronger: "LinkPower mạnh hơn", competitor_stronger: "Đối thủ mạnh hơn", equal: "Ngang nhau", no_data: NO_DATA }[s] || s;
+  }
+  function statusTone(s) {
+    return { linkpower_stronger: "green", competitor_stronger: "orange", equal: "blue", no_data: "gray" }[s] || "gray";
+  }
+
+  function sectionPlatformBenchmark(d) {
+    d = d || {};
+    var platforms = Object.keys(d);
+    if (!platforms.length) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return platforms
+      .map(function (platform) {
+        var entry = d[platform];
+        var oneVsOne = safeArray(entry.one_vs_one);
+        var group = entry.one_vs_group;
+        var html = '<div style="margin-bottom:14px"><b style="font-size:12.5px;color:var(--lpv3-navy-900)">' + escapeHtml(PLATFORM_LABELS[platform] || platform) + "</b>";
+        oneVsOne.forEach(function (cmp) {
+          html += '<div style="margin-top:8px"><span class="lpv3-badge lpv3-badge-' + statusTone(cmp.overall_status) + '">' + escapeHtml(cmp.competitor || "?") + " — " + escapeHtml(statusLabel(cmp.overall_status)) + "</span> <span class=\"lpv3-field-hint\">độ tin cậy: " + escapeHtml(confidenceLabel(cmp.confidence_score)) + "</span>" + benchmarkRowsTable(cmp.rows) + "</div>";
+        });
+        if (group) {
+          html += '<div style="margin-top:8px"><span class="lpv3-badge lpv3-badge-' + statusTone(group.overall_status) + '">So với nhóm đối thủ — ' + escapeHtml(statusLabel(group.overall_status)) + "</span>" +
+            (group.sample_note ? '<div class="lpv3-field-hint" style="margin-top:4px">' + escapeHtml(group.sample_note) + "</div>" : "") +
+            benchmarkRowsTable(group.rows) + "</div>";
+        }
+        html += "</div>";
+        return html;
+      })
+      .join("");
+  }
+
+  function benchmarkRowsTable(rows) {
+    rows = safeArray(rows);
+    if (!rows.length) return "";
+    var body = rows
+      .map(function (r) {
+        return (
+          "<tr><td>" + escapeHtml(r.criteria) + "</td><td>" + escapeHtml(isNum(r.linkpower) ? fmtScore(r.linkpower) : r.linkpower) + "</td><td>" +
+          escapeHtml(isNum(r.competitor) ? fmtScore(r.competitor) : r.competitor) + "</td><td><span class=\"lpv3-badge lpv3-badge-" + statusTone(r.status) + "\">" + escapeHtml(statusLabel(r.status)) + "</span></td></tr>"
+        );
+      })
+      .join("");
+    return '<div class="lpv3-table-wrap" style="margin-top:6px"><table class="lpv3-table"><thead><tr><th>Tiêu chí</th><th>LinkPower</th><th>Đối thủ</th><th>Kết quả</th></tr></thead><tbody>' + body + "</tbody></table></div>";
+  }
+
+  function shareBarsHtml(share) {
+    share = share || {};
+    var keys = Object.keys(share).sort(function (a, b) { return (share[b] || 0) - (share[a] || 0); });
+    if (!keys.length) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return keys
+      .map(function (k) {
+        var v = share[k] || 0;
+        return (
+          '<div class="lpv3-bar-row"><span class="lpv3-bar-label">' + escapeHtml(k) + '</span>' +
+          '<div class="lpv3-bar-track"><div class="lpv3-bar-fill" style="width:' + Math.min(100, v) + '%"></div></div>' +
+          '<span class="lpv3-bar-pct">' + fmtPct(v) + "</span></div>"
+        );
+      })
+      .join("");
+  }
+
+  function sectionShareBreakdown(e) {
+    if (!e) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return (
+      '<div style="margin-bottom:10px"><b style="font-size:11.5px;color:var(--lpv3-gray-600)">LinkPower</b>' + shareBarsHtml(e.linkpower_share) + "</div>" +
+      '<div><b style="font-size:11.5px;color:var(--lpv3-gray-600)">Đối thủ</b>' + shareBarsHtml(e.competitor_share) + "</div>" +
+      (safeArray(e.linkpower_missing).length ? '<div style="margin-top:8px" class="lpv3-chip-group">' + e.linkpower_missing.map(function (k) { return '<span class="lpv3-chip">Thiếu: ' + escapeHtml(k) + "</span>"; }).join("") + "</div>" : "")
+    );
+  }
+
+  function sectionTopContent(g) {
+    g = g || {};
+    var channels = Object.keys(g);
+    if (!channels.length) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return channels
+      .map(function (label) {
+        var items = safeArray(g[label]);
+        var rows = items.length
+          ? items
+              .map(function (it, i) {
+                return (
+                  "<tr><td>#" + (i + 1) + "</td><td>" + fmtNum(it.engagement_count) + "</td><td>" + escapeHtml(truncate(it.text_preview, 70)) + "</td>" +
+                  "<td><a href=\"" + escapeAttr(it.permalink) + "\" target=\"_blank\" rel=\"noopener\">Xem</a></td></tr>"
+                );
+              })
+              .join("")
+          : "";
+        return (
+          '<div style="margin-bottom:10px"><b style="font-size:12px;color:var(--lpv3-navy-900)">' + escapeHtml(label) + "</b>" +
+          (rows ? '<div class="lpv3-table-wrap" style="margin-top:6px"><table class="lpv3-table"><thead><tr><th>#</th><th>Engagement</th><th>Nội dung</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>" : '<p class="lpv3-empty">' + NO_DATA + "</p>") +
+          "</div>"
+        );
+      })
+      .join("");
+  }
+
+  function chipListOrEmpty(items) {
+    items = safeArray(items);
+    if (!items.length) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return '<div class="lpv3-chip-group">' + items.map(function (i) { return '<span class="lpv3-chip">' + escapeHtml(i) + "</span>"; }).join("") + "</div>";
+  }
+
+  function messagingBlock(title, m) {
+    if (!m) return "";
+    var ctaEntries = m.cta_distribution || {};
+    var ctaKeys = Object.keys(ctaEntries);
+    return (
+      '<div style="margin-bottom:12px"><b style="font-size:12px;color:var(--lpv3-navy-900)">' + escapeHtml(title) + "</b>" +
+      '<div style="margin-top:6px"><span class="lpv3-field-hint">Thông điệp chính</span>' + chipListOrEmpty(m.primary_messages) + "</div>" +
+      '<div style="margin-top:6px"><span class="lpv3-field-hint">Pain point</span>' + chipListOrEmpty(m.pain_points) + "</div>" +
+      '<div style="margin-top:6px"><span class="lpv3-field-hint">Benefit</span>' + chipListOrEmpty(m.benefits) + "</div>" +
+      '<div style="margin-top:6px"><span class="lpv3-field-hint">Tone of voice</span>' + chipListOrEmpty(m.tone_of_voice) + "</div>" +
+      (ctaKeys.length ? '<div style="margin-top:6px"><span class="lpv3-field-hint">CTA</span>' + chipListOrEmpty(ctaKeys.map(function (k) { return k + " (" + ctaEntries[k] + ")"; })) + "</div>" : "") +
+      "</div>"
+    );
+  }
+
+  function sectionMessaging(h) {
+    if (!h) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return '<div class="lpv3-report-grid">' + reportCardInline(messagingBlock("LinkPower", h.linkpower)) + reportCardInline(messagingBlock("Đối thủ", h.competitor)) + "</div>";
+  }
+  function reportCardInline(html) { return '<div>' + html + '</div>'; }
+
+  function sectionCompetitiveGap(i) {
+    if (!i) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    return (
+      '<div style="margin-bottom:8px"><span class="lpv3-field-hint">Đối thủ đang làm mà LinkPower chưa</span>' + chipListOrEmpty(i.competitor_doing_linkpower_not) + "</div>" +
+      '<div style="margin-bottom:8px"><span class="lpv3-field-hint">LinkPower đang mạnh hơn</span>' + chipListOrEmpty(i.linkpower_stronger_pillars) + "</div>" +
+      '<div style="margin-bottom:8px"><span class="lpv3-field-hint">Pillar cạnh tranh cao (cả 2 bên đều làm)</span>' + chipListOrEmpty(i.highly_contested_pillars) + "</div>" +
+      '<div style="margin-bottom:8px"><span class="lpv3-field-hint">Khoảng trống nội dung (chưa ai khai thác nhiều)</span>' + chipListOrEmpty(i.content_gap_pillars) + "</div>" +
+      '<div><span class="lpv3-field-hint">Định dạng nên tăng</span>' + chipListOrEmpty(i.format_to_increase) + "</div>"
+    );
+  }
+
+  function sectionRecommendations(rows) {
+    rows = safeArray(rows);
+    if (!rows.length) return '<p class="lpv3-empty">' + NO_DATA + "</p>";
+    var priorityTone = { high: "red", medium: "orange", low: "gray" };
+    var body = rows
+      .map(function (r) {
+        return (
+          "<tr><td>" + escapeHtml(PLATFORM_LABELS[r.platform] || r.platform) + "</td><td>" + escapeHtml(r.content_type) + "</td>" +
+          "<td>" + escapeHtml(r.frequency) + "</td><td><span class=\"lpv3-badge lpv3-badge-" + (priorityTone[r.priority] || "gray") + "\">" + escapeHtml(r.priority) + "</span></td>" +
+          "<td>" + escapeHtml(r.reason) + "</td><td>" + escapeHtml(r.horizon) + "</td></tr>"
+        );
+      })
+      .join("");
+    return '<div class="lpv3-table-wrap"><table class="lpv3-table"><thead><tr><th>Nền tảng</th><th>Loại nội dung</th><th>Tần suất</th><th>Ưu tiên</th><th>Lý do</th><th>Mốc</th></tr></thead><tbody>' + body + "</tbody></table></div>";
+  }
+
+  /* ======================================================================
+     10. INIT
+     ====================================================================== */
+  function init() {
+    initConfigPanel();
+    initProjectStep();
+    initBrandStep();
+    initRunStep();
+    initReportStep();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>

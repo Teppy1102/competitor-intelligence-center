@@ -84,3 +84,36 @@ def test_embed_html_never_calls_apify_or_openai_directly():
     html = _read("ver3-social-benchmark-embed.html")
     assert "apify.com" not in html.lower()
     assert "api.openai.com" not in html.lower()
+
+
+def test_embed_html_resuming_project_auto_shows_existing_report():
+    # Bug UAT phat hien khi test that: mo lai project da co san report (vd
+    # F5 lay lai project_id tu localStorage trong onProjectReady()) phai TU
+    # HIEN report gan nhat ngay, khong doi nguoi dung bam "Chay Benchmark"/
+    # "Thu lai" lai moi thay - dung yeu cau "F5 -> report cu van con" o
+    # V3_HANDOFF_FOR_OWNER.md muc test nhanh #5.
+    html = _read("ver3-social-benchmark-embed.html")
+    start = html.index("function onProjectReady(")
+    end = html.index("function resetToNewProject")
+    body = html[start:end]
+    assert "fetchReportHistory(true).then(" in body
+    assert "fetchLatestReport()" in body
+
+
+def test_report_grid_items_do_not_force_horizontal_page_overflow():
+    # Bug UAT phat hien khi test that tren mobile 375px: cac muc report (kv-list
+    # cau A/B... va bang trong table-wrap) la flex/grid item, mac dinh
+    # min-width:auto khien chung KHONG chiu co lai theo track/container, keo
+    # ca trang bi tran ngang (document.scrollWidth > clientWidth) du da co
+    # @media query dua report-grid ve 1 cot. Fix: dat min-width:0 tren cac
+    # grid item (.lpv3-card, .lpv3-report-grid) va tren .lpv3-kv-list li (flex
+    # item chua text dai khong ngat dong duoc) de chung co lai dung, cho
+    # phep noi dung ben trong tu wrap/scroll rieng thay vi day rong ca trang.
+    html = _read("ver3-social-benchmark-embed.html")
+    assert "#lpv3-root .lpv3-card {" in html
+    card_rule = html[html.index("#lpv3-root .lpv3-card {"):html.index("}", html.index("#lpv3-root .lpv3-card {"))]
+    assert "min-width: 0" in card_rule
+    report_grid_rule = html[html.index("#lpv3-root .lpv3-report-grid {"):html.index("}", html.index("#lpv3-root .lpv3-report-grid {"))]
+    assert "min-width: 0" in report_grid_rule
+    kv_list_li_rule = html[html.index("#lpv3-root .lpv3-kv-list li {"):html.index("}", html.index("#lpv3-root .lpv3-kv-list li {"))]
+    assert "min-width: 0" in kv_list_li_rule

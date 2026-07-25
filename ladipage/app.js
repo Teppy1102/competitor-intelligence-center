@@ -976,3 +976,491 @@ const Cic = (() => {
 })();
 
 document.addEventListener("DOMContentLoaded", Cic.init);
+
+/* ==========================================================================
+   10. BENCHMARK — Social Competitor Benchmark (Ver 3, Sprint V3.2)
+   Module doc lap voi App/Cic o tren (khong dung chung state) - goi
+   /api/v3/benchmark/* tren CUNG 1 backend voi Cic (Competitor Intelligence
+   Center API), tu ve toan bo flow (tao du an -> them thuong hieu/kenh ->
+   chay phan tich -> hien report) trong section #benchmarkSection. Tai su
+   dung Utils/ICONS da dinh nghia o tren (Muc 2, 4) va cac class component
+   chung .card/.btn/.data-table/.badge/.progress-track (khong dung rieng -
+   xem style.css Muc 9 "SOCIAL COMPETITOR BENCHMARK").
+   ========================================================================== */
+const Benchmark = (() => {
+  const CONFIG = Object.freeze({
+    // Cung backend voi Cic (route moi /api/v3/* duoc mount them, khong doi
+    // domain) - xem docs/ver3/V3_ARCHITECTURE.md muc 11.
+    API_BASE: "https://competitor-intelligence-center-api.onrender.com",
+    // Chay dong bo (giong Cic) - co the mat toi vai phut neu nhieu kenh +
+    // provider that (Apify) duoc cau hinh, dat timeout rong rai o frontend.
+    REQUEST_TIMEOUT_MS: 240000,
+  });
+
+  const JOB_STATUS_LABELS = {
+    pending: { text: "Đang chờ", tone: "badge-gray" },
+    collecting: { text: "Đang thu thập", tone: "badge-blue" },
+    collected: { text: "Đã thu thập", tone: "badge-green" },
+    partially_collected: { text: "Thu thập một phần", tone: "badge-orange" },
+    failed: { text: "Thất bại", tone: "badge-gray" },
+    requires_manual_input: { text: "Cần nhập thủ công", tone: "badge-orange" },
+  };
+
+  let state = { projectId: null, brands: [] };
+  let els = {};
+
+  function cacheEls() {
+    els.projectName = document.getElementById("bmkProjectName");
+    els.objective = document.getElementById("bmkObjective");
+    els.dateRange = document.getElementById("bmkDateRange");
+    els.contentLimit = document.getElementById("bmkContentLimit");
+    els.createProjectBtn = document.getElementById("bmkCreateProjectBtn");
+    els.projectError = document.getElementById("bmkProjectError");
+    els.brandCard = document.getElementById("bmkBrandCard");
+    els.brandName = document.getElementById("bmkBrandName");
+    els.brandType = document.getElementById("bmkBrandType");
+    els.addBrandBtn = document.getElementById("bmkAddBrandBtn");
+    els.brandError = document.getElementById("bmkBrandError");
+    els.brandList = document.getElementById("bmkBrandList");
+    els.runCard = document.getElementById("bmkRunCard");
+    els.runBtn = document.getElementById("bmkRunBtn");
+    els.runError = document.getElementById("bmkRunError");
+    els.runLoading = document.getElementById("bmkRunLoading");
+    els.jobList = document.getElementById("bmkJobList");
+    els.reportRoot = document.getElementById("bmkReportRoot");
+  }
+
+  function showError(el, msg) {
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  }
+  function clearError(el) {
+    el.classList.add("hidden");
+  }
+
+  /* ---- API ---- */
+  async function apiRequest(path, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch(`${CONFIG.API_BASE}${path}`, { ...options, signal: controller.signal });
+    } catch (networkErr) {
+      clearTimeout(timeoutId);
+      if (networkErr.name === "AbortError") {
+        throw new Error("Quá thời gian chờ phản hồi từ máy chủ, vui lòng thử lại sau.");
+      }
+      throw new Error("Không thể kết nối tới máy chủ phân tích, vui lòng kiểm tra kết nối mạng.");
+    }
+    clearTimeout(timeoutId);
+
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (e) {
+      /* noop */
+    }
+    if (!res.ok) {
+      throw new Error((data && data.detail) || `Lỗi API (HTTP ${res.status})`);
+    }
+    return data;
+  }
+
+  const Api = {
+    createProject: (payload) =>
+      apiRequest("/api/v3/benchmark/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    addBrand: (projectId, payload) =>
+      apiRequest(`/api/v3/benchmark/projects/${projectId}/brands`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    addChannel: (projectId, payload) =>
+      apiRequest(`/api/v3/benchmark/projects/${projectId}/channels`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    deleteChannel: (channelId) =>
+      apiRequest(`/api/v3/benchmark/channels/${channelId}`, { method: "DELETE" }),
+    runProject: (projectId) =>
+      apiRequest(`/api/v3/benchmark/projects/${projectId}/run`, { method: "POST" }),
+    getJobs: (projectId) => apiRequest(`/api/v3/benchmark/projects/${projectId}/jobs`),
+    retryJob: (jobId) => apiRequest(`/api/v3/benchmark/jobs/${jobId}/retry`, { method: "POST" }),
+    getReport: (projectId) => apiRequest(`/api/v3/benchmark/projects/${projectId}/report`),
+    importFile: (channelId, file) => {
+      const form = new FormData();
+      form.append("channel_id", channelId);
+      form.append("file", file);
+      // KHONG tu dat Content-Type - trinh duyet tu dat multipart boundary dung.
+      return apiRequest("/api/v3/benchmark/import", { method: "POST", body: form });
+    },
+  };
+
+  /* ---- Buoc 1: Project ---- */
+  async function createProject() {
+    const name = (els.projectName.value || "").trim();
+    if (!name) {
+      showError(els.projectError, "Vui lòng nhập tên dự án.");
+      return;
+    }
+    clearError(els.projectError);
+    els.createProjectBtn.disabled = true;
+    try {
+      const project = await Api.createProject({
+        name,
+        objective: (els.objective.value || "").trim() || null,
+        date_range_days: parseInt(els.dateRange.value, 10) || 90,
+        content_limit: parseInt(els.contentLimit.value, 10) || 30,
+      });
+      state.projectId = project.id;
+      state.brands = [];
+      els.brandCard.classList.remove("hidden");
+      els.runCard.classList.add("hidden");
+      els.reportRoot.classList.add("hidden");
+      renderBrandList();
+      els.brandCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      showError(els.projectError, err.message || "Không thể tạo dự án, thử lại sau.");
+    } finally {
+      els.createProjectBtn.disabled = false;
+    }
+  }
+
+  /* ---- Buoc 2-3: Brand & Channel ---- */
+  async function addBrand() {
+    const name = (els.brandName.value || "").trim();
+    const brand_type = els.brandType.value;
+    if (!name) {
+      showError(els.brandError, "Vui lòng nhập tên thương hiệu.");
+      return;
+    }
+    clearError(els.brandError);
+    els.addBrandBtn.disabled = true;
+    try {
+      const brand = await Api.addBrand(state.projectId, { name, brand_type });
+      state.brands.push({ ...brand, channels: [] });
+      els.brandName.value = "";
+      renderBrandList();
+    } catch (err) {
+      showError(els.brandError, err.message || "Không thể thêm thương hiệu.");
+    } finally {
+      els.addBrandBtn.disabled = false;
+    }
+  }
+
+  function renderBrandList() {
+    els.brandList.innerHTML = state.brands
+      .map(
+        (brand) => `
+      <div class="bmk-brand-block">
+        <div class="bmk-brand-block-header">
+          <span class="bmk-brand-name">${Utils.escapeHtml(brand.name)}</span>
+          <span class="badge ${brand.brand_type === "linkpower" ? "badge-blue" : "badge-gray"}">${
+            brand.brand_type === "linkpower" ? "LinkPower" : "Đối thủ"
+          }</span>
+        </div>
+        <div class="bmk-channel-row">
+          <input type="text" class="bmk-channel-url-input" placeholder="Dán URL Facebook/LinkedIn/TikTok..." data-brand-id="${brand.id}">
+          <button class="btn btn-ghost btn-sm bmk-add-channel-btn" data-brand-id="${brand.id}">+ Thêm kênh</button>
+        </div>
+        <div class="bmk-channel-error mic-error hidden" data-brand-id="${brand.id}"></div>
+        <div class="bmk-channel-items">
+          ${
+            brand.channels
+              .map(
+                (ch) => `
+            <div class="bmk-channel-item">
+              <span class="badge badge-blue">${Utils.escapeHtml(ch.platform)}</span>
+              <span class="bmk-channel-url">${Utils.escapeHtml(ch.normalized_url)}</span>
+              <button class="bmk-channel-remove" data-channel-id="${ch.id}" data-brand-id="${brand.id}">Xoá</button>
+            </div>`
+              )
+              .join("") || `<p class="card-empty">Chưa có kênh nào.</p>`
+          }
+        </div>
+      </div>`
+      )
+      .join("");
+
+    els.brandList.querySelectorAll(".bmk-add-channel-btn").forEach((btn) => {
+      btn.addEventListener("click", () => addChannel(btn.dataset.brandId));
+    });
+    els.brandList.querySelectorAll(".bmk-channel-remove").forEach((btn) => {
+      btn.addEventListener("click", () => removeChannel(btn.dataset.brandId, btn.dataset.channelId));
+    });
+  }
+
+  async function addChannel(brandId) {
+    const input = els.brandList.querySelector(`.bmk-channel-url-input[data-brand-id="${brandId}"]`);
+    const errorEl = els.brandList.querySelector(`.bmk-channel-error[data-brand-id="${brandId}"]`);
+    const url = (input.value || "").trim();
+    if (!url) {
+      showError(errorEl, "Vui lòng nhập URL.");
+      return;
+    }
+    clearError(errorEl);
+    try {
+      const channel = await Api.addChannel(state.projectId, { brand_id: brandId, url });
+      const brand = state.brands.find((b) => b.id === brandId);
+      brand.channels.push(channel);
+      input.value = "";
+      renderBrandList();
+      checkRunReady();
+    } catch (err) {
+      showError(errorEl, err.message || "Không thể thêm kênh.");
+    }
+  }
+
+  async function removeChannel(brandId, channelId) {
+    try {
+      await Api.deleteChannel(channelId);
+      const brand = state.brands.find((b) => b.id === brandId);
+      brand.channels = brand.channels.filter((c) => c.id !== channelId);
+      renderBrandList();
+      checkRunReady();
+    } catch (err) {
+      alert(err.message || "Không thể xoá kênh.");
+    }
+  }
+
+  function checkRunReady() {
+    const hasLinkPower = state.brands.some((b) => b.brand_type === "linkpower" && b.channels.length);
+    const hasCompetitor = state.brands.some((b) => b.brand_type === "competitor" && b.channels.length);
+    els.runCard.classList.toggle("hidden", !(hasLinkPower && hasCompetitor));
+  }
+
+  /* ---- Buoc 4: Run ---- */
+  async function runProject() {
+    clearError(els.runError);
+    els.runBtn.disabled = true;
+    els.runLoading.classList.remove("hidden");
+    els.reportRoot.classList.add("hidden");
+    try {
+      await Api.runProject(state.projectId);
+      await refreshJobsAndReport();
+    } catch (err) {
+      showError(els.runError, err.message || "Không thể chạy phân tích, thử lại sau.");
+    } finally {
+      els.runLoading.classList.add("hidden");
+      els.runBtn.disabled = false;
+    }
+  }
+
+  async function refreshJobsAndReport() {
+    const jobsRes = await Api.getJobs(state.projectId);
+    renderJobs(jobsRes.items);
+    try {
+      const report = await Api.getReport(state.projectId);
+      renderReport(report.full_report);
+    } catch (err) {
+      /* co the chua co report (vd tat ca channel deu requires_manual_input) -
+         khong coi la loi fatal, chi khong hien report */
+    }
+  }
+
+  function channelInfoMap() {
+    const map = {};
+    state.brands.forEach((b) =>
+      b.channels.forEach((c) => {
+        map[c.id] = { platform: c.platform, brandName: b.name };
+      })
+    );
+    return map;
+  }
+
+  function renderJobs(jobs) {
+    const info = channelInfoMap();
+    els.jobList.innerHTML =
+      jobs
+        .map((job) => {
+          const meta = info[job.channel_id] || { platform: "?", brandName: "?" };
+          const statusMeta = JOB_STATUS_LABELS[job.status] || { text: job.status, tone: "badge-gray" };
+          const needsRetry = job.status === "failed";
+          const needsImport = job.status === "requires_manual_input";
+          return `
+        <div class="bmk-job-row">
+          <span class="bmk-job-channel">${Utils.escapeHtml(meta.brandName)} (${Utils.escapeHtml(meta.platform)})</span>
+          <span class="badge ${statusMeta.tone}">${statusMeta.text}</span>
+          <span>${job.posts_collected != null ? job.posts_collected + " bài" : ""}</span>
+          <div class="bmk-job-actions">
+            ${needsRetry ? `<button class="btn btn-ghost btn-sm bmk-retry-btn" data-job-id="${job.id}">Thử lại</button>` : ""}
+            ${
+              needsImport
+                ? `<form class="bmk-import-form" data-channel-id="${job.channel_id}">
+                     <input type="file" accept=".csv,.json" class="bmk-import-file">
+                     <button type="submit" class="btn btn-ghost btn-sm">Nhập dữ liệu</button>
+                   </form>`
+                : ""
+            }
+          </div>
+          ${job.error_reason ? `<div class="bmk-job-reason">${Utils.escapeHtml(job.error_reason)}</div>` : ""}
+        </div>`;
+        })
+        .join("") || `<p class="card-empty">Chưa có job nào.</p>`;
+
+    els.jobList.querySelectorAll(".bmk-retry-btn").forEach((btn) => {
+      btn.addEventListener("click", () => retryJob(btn.dataset.jobId));
+    });
+    els.jobList.querySelectorAll(".bmk-import-form").forEach((form) => {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const file = form.querySelector(".bmk-import-file").files[0];
+        if (file) importChannelFile(form.dataset.channelId, file);
+      });
+    });
+  }
+
+  async function retryJob(jobId) {
+    els.runLoading.classList.remove("hidden");
+    try {
+      await Api.retryJob(jobId);
+      await refreshJobsAndReport();
+    } catch (err) {
+      alert(err.message || "Không thể thử lại kênh này.");
+    } finally {
+      els.runLoading.classList.add("hidden");
+    }
+  }
+
+  async function importChannelFile(channelId, file) {
+    els.runLoading.classList.remove("hidden");
+    try {
+      const result = await Api.importFile(channelId, file);
+      alert(
+        `Đã nhập ${result.imported_count}/${result.total_rows} dòng hợp lệ. ` +
+          `Bấm "Chạy Benchmark" để phân tích lại với dữ liệu mới.`
+      );
+      const jobsRes = await Api.getJobs(state.projectId);
+      renderJobs(jobsRes.items);
+    } catch (err) {
+      alert(err.message || "Không thể nhập dữ liệu, kiểm tra lại định dạng file.");
+    } finally {
+      els.runLoading.classList.add("hidden");
+    }
+  }
+
+  /* ---- Buoc 5: Report ---- */
+  function renderReport(report) {
+    if (!report) return;
+    const es = report.executive_summary || {};
+    const ranking = Utils.safeArray(report.brand_ranking);
+    const platformBenchmark = report.platform_benchmark || {};
+    const recs = Utils.safeArray(report.recommendations);
+    const gap = report.competitive_gap || {};
+
+    const platformCards = Object.entries(platformBenchmark)
+      .map(
+        ([platform, entry]) => `
+      <div class="card card-pad">
+        <div class="card-header"><div class="card-title-group"><div class="card-title">Benchmark trên ${Utils.escapeHtml(platform)}</div></div></div>
+        <div class="card-body">
+          ${Utils.safeArray(entry.one_vs_one)
+            .map(
+              (cmp) =>
+                `<p><strong>vs ${Utils.escapeHtml(cmp.competitor || "")}</strong> — <span class="badge badge-gray">${Utils.escapeHtml(cmp.overall_status)}</span> (độ tin cậy: ${Utils.escapeHtml(cmp.confidence_score)})</p>`
+            )
+            .join("")}
+          ${
+            entry.one_vs_group
+              ? `<p><strong>So với nhóm đối thủ</strong> — <span class="badge badge-gray">${Utils.escapeHtml(entry.one_vs_group.overall_status)}</span></p>
+                 <div class="bmk-sample-note">${Utils.escapeHtml(entry.one_vs_group.sample_note || "")}</div>`
+              : ""
+          }
+        </div>
+      </div>`
+      )
+      .join("");
+
+    els.reportRoot.innerHTML = `
+      <div class="card card-pad">
+        <div class="card-header"><div class="card-title-group"><div class="card-title">Tổng quan (Executive Summary)</div></div></div>
+        <div class="card-body">
+          <p>${Utils.escapeHtml(es.linkpower_overview || "")}</p>
+          <p>Đối thủ mạnh nhất: <strong>${Utils.escapeHtml(es.strongest_competitor || "Không đủ dữ liệu")}</strong></p>
+          <p>Khoảng trống lớn nhất: <strong>${Utils.escapeHtml(es.biggest_gap || "Không đủ dữ liệu")}</strong></p>
+          <ul>${Utils.safeArray(es.top_3_actions).map((a) => `<li>${Utils.escapeHtml(a)}</li>`).join("")}</ul>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="card-header"><div class="card-title-group"><div class="card-title">Xếp hạng thương hiệu</div></div></div>
+        <div class="card-body">
+          <div class="table-wrap"><table class="data-table">
+            <thead><tr><th>Thương hiệu</th><th>Nền tảng</th><th>Overall</th><th>Engagement</th><th>Activity</th><th>Độ tin cậy</th></tr></thead>
+            <tbody>${ranking
+              .map(
+                (r) => `
+              <tr>
+                <td>${Utils.escapeHtml(r.brand)}</td>
+                <td>${Utils.escapeHtml(r.platform)}</td>
+                <td>${r.overall_score ?? "-"}</td>
+                <td>${r.engagement_score ?? "-"}</td>
+                <td>${r.activity_score ?? "-"}</td>
+                <td><span class="badge badge-gray">${Utils.escapeHtml(r.confidence)}</span></td>
+              </tr>`
+              )
+              .join("")}</tbody>
+          </table></div>
+        </div>
+      </div>
+
+      ${platformCards}
+
+      <div class="card card-pad">
+        <div class="card-header"><div class="card-title-group"><div class="card-title">Khoảng trống nội dung so với đối thủ</div></div></div>
+        <div class="card-body">
+          <div class="bmk-gap-list">
+            ${
+              Utils.safeArray(gap.competitor_doing_linkpower_not)
+                .map((p) => `<span class="bmk-gap-chip">${Utils.escapeHtml(p)}</span>`)
+                .join("") || `<p class="card-empty">Không đủ dữ liệu.</p>`
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="card-header"><div class="card-title-group"><div class="card-title">Đề xuất hành động</div></div></div>
+        <div class="card-body">
+          <div class="table-wrap"><table class="data-table">
+            <thead><tr><th>Nền tảng</th><th>Nội dung</th><th>Ưu tiên</th><th>Lý do</th><th>Mốc</th></tr></thead>
+            <tbody>${recs
+              .map(
+                (r) => `
+              <tr>
+                <td>${Utils.escapeHtml(r.platform)}</td>
+                <td>${Utils.escapeHtml(r.content_type)}</td>
+                <td><span class="badge ${r.priority === "high" ? "badge-orange" : "badge-gray"}">${Utils.escapeHtml(r.priority)}</span></td>
+                <td>${Utils.escapeHtml(r.reason)}</td>
+                <td>${Utils.escapeHtml(r.horizon)}</td>
+              </tr>`
+              )
+              .join("")}</tbody>
+          </table></div>
+        </div>
+      </div>
+    `;
+    els.reportRoot.classList.remove("hidden");
+    els.reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function wireEvents() {
+    els.createProjectBtn.addEventListener("click", createProject);
+    els.addBrandBtn.addEventListener("click", addBrand);
+    els.runBtn.addEventListener("click", runProject);
+  }
+
+  function init() {
+    cacheEls();
+    wireEvents();
+  }
+
+  return { init };
+})();
+
+document.addEventListener("DOMContentLoaded", Benchmark.init);

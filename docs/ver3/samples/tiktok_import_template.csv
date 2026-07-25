@@ -1,0 +1,3 @@
+external_content_id,published_at,content_type,author_name,author_url,text_content,media_urls,thumbnail_url,video_duration,hashtags,mentions,external_links,cta_text,language,view_count,like_count,comment_count,share_count,save_count,follower_count_at_collection
+tt-video-001,2026-06-02T10:00:00Z,video,linkpower.vn,https://www.tiktok.com/@linkpower.vn,"3 sai lầm thường gặp khi xây KPI cho phòng nhân sự",https://example.com/video1.mp4,https://example.com/thumb1.jpg,45,#KPI|#HRTips,,,Xem thêm tại bio,vi,15000,1200,85,60,40,18000
+tt-video-002,2026-05-25T16:20:00Z,video,linkpower.vn,https://www.tiktok.com/@linkpower.vn,"Học viên chia sẻ cảm nhận sau khóa BSC-KPI",https://example.com/video2.mp4,https://example.com/thumb2.jpg,30,#BSCKPI|#Testimonial,,,,vi,9000,700,40,25,15,18000

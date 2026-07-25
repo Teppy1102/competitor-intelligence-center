@@ -390,3 +390,53 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .cic-header h2 { font-size: 26px; }
   .cic-metric-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ==========================================================================
+   9. SOCIAL COMPETITOR BENCHMARK (Sprint V3.2) - doc lap voi MIC/CIC o tren,
+   dung chung token/component (.card/.btn/.badge/.data-table/.progress-track)
+   da dinh nghia o Muc 1/4 - chi them class rieng prefix "bmk-".
+   ========================================================================== */
+
+.bmk-form-card + .card { margin-top: var(--sp-5); }
+.bmk-field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.bmk-field-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.bmk-field-grid input, .bmk-field-grid select,
+.bmk-brand-row input, .bmk-brand-row select,
+.bmk-channel-row input {
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px;
+  font-size: 14px; color: var(--text); background: var(--surface);
+}
+
+.bmk-brand-row { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+.bmk-brand-row input { flex: 1; min-width: 180px; }
+
+.bmk-brand-list { display: flex; flex-direction: column; gap: var(--sp-4); }
+.bmk-brand-block { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--sp-4); }
+.bmk-brand-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+.bmk-brand-name { font-weight: 650; color: var(--navy-900); }
+
+.bmk-channel-row { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.bmk-channel-row input { flex: 1; }
+
+.bmk-channel-item { display: flex; align-items: center; gap: var(--sp-3); padding: 8px 0; font-size: 13px; }
+.bmk-channel-item + .bmk-channel-item { border-top: 1px solid var(--border); }
+.bmk-channel-url { flex: 1; color: var(--text-2); word-break: break-all; }
+.bmk-channel-remove { color: var(--red, #dc2626); cursor: pointer; font-size: 12px; background: none; border: none; }
+
+.bmk-job-list { margin-top: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-2); }
+.bmk-job-row { display: flex; align-items: center; gap: var(--sp-3); padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 13px; }
+.bmk-job-row .bmk-job-channel { flex: 1; font-weight: 600; color: var(--text); }
+.bmk-job-row .bmk-job-reason { flex-basis: 100%; color: var(--text-2); font-size: 12px; margin-top: 4px; }
+.bmk-job-actions { display: flex; gap: var(--sp-2); align-items: center; }
+
+.bmk-import-form { display: flex; gap: var(--sp-2); align-items: center; }
+
+.bmk-report { margin-top: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-5); }
+.bmk-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--sp-4); }
+.bmk-sample-note { font-size: 12px; color: var(--text-2); font-style: italic; margin-top: var(--sp-2); }
+.bmk-gap-list { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.bmk-gap-chip { background: var(--orange-light); color: var(--orange); border-radius: var(--r-pill); padding: 4px 12px; font-size: 12px; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .bmk-field-grid { grid-template-columns: 1fr; }
+}

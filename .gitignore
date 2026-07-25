@@ -15,3 +15,8 @@ reports/*.meta.json
 # Debug script output - chua du lieu Facebook that (dung cho scripts/debug_facebook_pipeline.py)
 debug/*.json
 !debug/.gitkeep
+
+# Sprint V3.2 - SQLite Ver 3 local dev (data/v3.db) - KHONG commit du lieu
+# runtime/test, production dung PostgreSQL qua DATABASE_URL (xem v3/db.py).
+data/*.db
+!data/.gitkeep

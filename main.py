@@ -26,18 +26,27 @@ chi duoc dung trong tests/ (khong bao gio duoc production import).
 KHONG doi/xoa bat ky package da lock kien truc nao (schemas/, analyzer/,
 benchmark/, report/) - main.py chi wire cac package do lai voi nhau qua
 engine/pipeline.py.
+
+Sprint V3.2 bo sung THEM (khong sua gi o tren): mount co dieu kien
+`v3/routers_v3.py` duoi prefix /api/v3 CHI KHI `v3.feature_flags.
+is_social_benchmark_enabled()` tra True (mac dinh: BAT - xem config.json
+"enable_social_benchmark", co the tat qua env ENABLE_SOCIAL_BENCHMARK=false
+neu can rollback nhanh ma khong deploy lai). Toan bo route Facebook MVP o
+tren KHONG doi 1 dong nao.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from adapters import FacebookAdapter
@@ -62,15 +71,73 @@ logger = logging.getLogger("cic.main")
 
 app = FastAPI(title="Competitor Intelligence Center - Facebook MVP")
 
+
+def _parse_allowed_origins() -> list[str]:
+    """Doc bien moi truong ALLOWED_ORIGINS (Sprint V3.3.4 de bai muc 2.1) -
+    danh sach domain cach nhau boi dau phay, vd
+    "https://edu.linkpower.vn,http://localhost:3000". KHONG dung wildcard "*"
+    cho production neu khong can (de bai: "Không dùng wildcard * cho
+    production nếu không cần") - mac dinh CHI edu.linkpower.vn khi bien nay
+    khong duoc dat, muon them localhost/preview domain thi dat ro rang qua
+    bien moi truong, khong hard-code them o day."""
+    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+    if not raw:
+        return ["https://edu.linkpower.vn"]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
 # CORS - API cong khai, khong dung cookie/session, cho phep goi tu Ladipage
 # (edu.linkpower.vn) - dung dung tinh than da thong nhat o Market
 # Intelligence Center (frontend khong phu thuoc backend, khac domain).
+# Sprint V3.3.4: mo them PUT/DELETE (Ver 3 dung cho update/delete project,
+# channel...) va Idempotency-Key trong allow_headers - xem docs/ver3/
+# V3_PRODUCTION_ENV_GUIDE.md muc CORS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_origins=_parse_allowed_origins(),
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Sprint V3.2 - Social Competitor Benchmark (v3/) - mount CO DIEU KIEN, sau
+# feature flag, KHONG anh huong route Facebook MVP o tren dung 1 dong nao.
+# ---------------------------------------------------------------------------
+from v3.feature_flags import is_social_benchmark_enabled  # noqa: E402
+
+if is_social_benchmark_enabled(CONFIG):
+    from v3.db import init_db as _v3_init_db
+    from v3.errors import V3Error as _V3Error
+    from v3.routers_v3 import router as _v3_router
+
+    _v3_init_db()
+    app.include_router(_v3_router, prefix="/api/v3")
+
+    @app.exception_handler(_V3Error)
+    async def _v3_error_handler(request: Request, exc: _V3Error):
+        logger.warning("v3_error path=%s type=%s detail=%s", request.url.path, type(exc).__name__, exc)
+        return JSONResponse(
+            status_code=exc.http_status,
+            content={"error": type(exc).__name__, "detail": str(exc)},
+        )
+
+    # v3/url_validator.py va mot so ham validate trong v3/services/* raise
+    # ValueError thuan (khong ke thua _V3Error) cho loi input don gian - bat
+    # RIENG o day thanh 400, tranh lot ra ngoai thanh loi 500 khong ro rang
+    # (de bai muc 15: "Error response thong nhat"). Ver 1/Ver 2 KHONG bao
+    # gio de ValueError thoat ra toi tang route (da tu bat va doi thanh
+    # HTTPException trong chinh code cua ho) nen handler nay khong anh
+    # huong hanh vi cua Ver 1/Ver 2.
+    @app.exception_handler(ValueError)
+    async def _v3_value_error_handler(request: Request, exc: ValueError):
+        if not request.url.path.startswith("/api/v3"):
+            raise exc  # khong thuoc Ver 3 - khong can can thiep
+        logger.warning("v3_value_error path=%s detail=%s", request.url.path, exc)
+        return JSONResponse(status_code=400, content={"error": "ValueError", "detail": str(exc)})
+
+    logger.info("v3_social_benchmark_enabled prefix=/api/v3")
+else:
+    logger.info("v3_social_benchmark_disabled - set enable_social_benchmark=true trong config.json hoac ENABLE_SOCIAL_BENCHMARK=true de bat")
 
 
 class FacebookAnalyzeRequest(BaseModel):
